@@ -88,6 +88,14 @@ std::tuple<int, int ,int> get_int_pair(std::string &line) {
     return {2, first, second};
 }
 
+std::pair<std::size_t, bool> int_to_size_t(int v) {
+    if (v < 0) {
+        return {0, false};
+    }
+
+    return {(std::size_t)((unsigned)v), true};
+}
+
 std::string spacer(std::size_t len) {
     std::string rtn;
     rtn.reserve(len * 2);
@@ -242,6 +250,15 @@ int main() {
 
         graph.nodes.reserve((std::size_t)((unsigned)nodes));
         graph.edges.reserve((std::size_t)((unsigned)edges));
+
+        for (int count = 0; count < nodes; ++count) {
+            Node n;
+            n.value = count + 1;
+            n.visited = false;
+            n.scc = {0, false};
+
+            graph.nodes.push_back(n);
+        }
     }
 
     {
@@ -258,49 +275,28 @@ int main() {
                 return 1;
             }
 
-            int u = std::get<1>(line_result);
-            int v = std::get<2>(line_result);
-            Node* u_ptr;
-            Node* v_ptr;
+            std::pair<std::size_t, bool> u_result = int_to_size_t(std::get<1>(line_result));
+            std::pair<std::size_t, bool> v_result = int_to_size_t(std::get<2>(line_result));
 
-            try {
-                u_ptr = known_nodes.at(u);
-            } catch(std::out_of_range const& err) {
-                Node u_node;
-                u_node.value = u;
-                u_node.visited = false;
-                u_node.scc = {0, false};
-
-                std::size_t index = graph.nodes.size();
-
-                graph.nodes.push_back(u_node);
-                u_ptr = &graph.nodes[index];
-
-                known_nodes[u] = u_ptr;
+            if (!u_result.second || !v_result.second) {
+                std::cout << "invalid graph node: \"" << line << "\"\n";
+                return 1;
             }
 
-            try {
-                v_ptr = known_nodes.at(v);
-            } catch(std::out_of_range const& err) {
-                Node v_node;
-                v_node.value = v;
-                v_node.visited = false;
-                v_node.scc = {0, false};
+            std::size_t u = u_result.first - 1;
+            std::size_t v = v_result.first - 1;
 
-                std::size_t index = graph.nodes.size();
-
-                graph.nodes.push_back(v_node);
-                v_ptr = &graph.nodes[index];
-
-                known_nodes[v] = v_ptr;
+            if (u > graph.nodes.size() || v > graph.nodes.size()) {
+                std::cout << "invalid graph node: \"" << line << "\"\n";
+                return 1;
             }
 
             Edge edge;
-            edge.u = u_ptr;
-            edge.v = v_ptr;
+            edge.u = &graph.nodes[u];
+            edge.v = &graph.nodes[v];
 
             graph.edges.push_back(edge);
-            graph.neighbors[u].push_back(v_ptr);
+            graph.neighbors[graph.nodes[u].value].push_back(&graph.nodes[v]);
         }
     }
 
