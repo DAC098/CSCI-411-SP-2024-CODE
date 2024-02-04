@@ -1,17 +1,52 @@
 #!/bin/bash
 
 if [[ ! -f "./main" ]]; then
-    cd ../ ; make asgn_01
-
-    if (( $? != 0 )); then
-        exit 1
-    fi
+    echo "missing main executable"
+    exit 1
 fi
 
-cat ./tests/${1}.in | ./main
+run_main() {
+    input=$(cat ./tests/${1}.in)
 
-echo "---------- expected output ----------"
+    if (( $? != 0 )); then
+        return 1
+    fi
 
-cat ./tests/${1}.out
+    result=$(echo $input | ./main)
 
-echo ""
+    if (( $? != 0 )); then
+        return 1
+    fi
+
+    if [[ -f "./tests/${1}.out" ]]; then
+        expected=$(cat ./tests/${1}.out)
+
+        if [[ $result = $expected ]]; then
+            echo "---------- expected output ----------"
+            echo $expected
+
+            return 1
+        fi
+    else
+        echo $result
+    fi
+
+    return 0
+}
+
+if [[ $1 = "all" ]]; then
+    for index in $(seq 1 100); do
+        padded=$(printf %3s $index | tr ' ' 0)
+        name="01_test_${padded}"
+
+        run_main $name
+
+        if (( $? != 0 )); then
+            echo "test ${name} failed"
+
+            exit 1
+        fi
+    done
+else
+    run_main $1
+fi
