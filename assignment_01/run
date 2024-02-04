@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cat ./tests/${1}.in | ./main
+
+echo "---------- expected output ----------"
+
+cat ./tests/${1}.out
+
+echo ""
