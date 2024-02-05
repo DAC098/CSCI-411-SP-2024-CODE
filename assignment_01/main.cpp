@@ -285,8 +285,8 @@ void scc_graph(Options &opts, Graph &graph) {
     } else {
         // this should have a newline at the end of it but the test (not mine)
         // may not be expecting it so it will be removed
-        std::cout << "Number of nodes and number of edges:\nAdd " << graph.edges.size()
-            << " edges:\n|A| = " << group_a << ", |B| = " << group_b << ", |C| = " << group_c;
+        std::cout << "Number of nodes and number of edges: \nAdd " << graph.edges.size()
+            << " edges: \n|A| = " << group_a << ", |B| = " << group_b << ", |C| = " << group_c;
     }
 }
 
