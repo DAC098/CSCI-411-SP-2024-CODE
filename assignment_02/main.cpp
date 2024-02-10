@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 #include <map>
+#include <set>
 
 /**
  * this options available for the program
@@ -18,8 +19,18 @@ struct Options {
  * a single node in the graph
  */
 struct Node {
-    int value = 0;
-    bool visited = false;
+    std::size_t value = 0;
+    int dist = 0;
+    bool inf = true;
+
+    void reset_dist() {
+        this->dist = 0;
+        this->inf = true;
+    }
+
+    std::size_t id() {
+        return this->value + 1;
+    }
 };
 
 /**
@@ -132,6 +143,106 @@ std::string spacer(std::size_t len) {
     return rtn;
 }
 
+void calc_graph(Graph &graph) {
+    std::set<std::size_t> cycle_set;
+    std::size_t iters = graph.nodes.size() - 1;
+
+    for (Node &src : graph.nodes) {
+        cycle_set.clear();
+
+        std::cout << "source: " << src.id() << "\n";
+
+        // run bellman-ford
+        for (Node &n : graph.nodes) {
+            n.reset_dist();
+        }
+
+        src.dist = 0;
+        src.inf = false;
+
+        for (std::size_t count = 0; count < iters; ++count) {
+            std::cout << "iteration: " << count << "\n";
+
+            for (Edge &edge : graph.edges) {
+                std::cout << "    " << edge.u->id() << " -> " << edge.v->id() << " w: " << edge.weight << " | u.dist: ";
+
+                if (edge.u->inf) {
+                    std::cout << "inf";
+                } else {
+                    std::cout << edge.u->dist;
+                }
+
+                std::cout << " | v.dist: ";
+
+                if (edge.v->inf) {
+                    std::cout << "inf";
+                } else {
+                    std::cout << edge.v->dist;
+                }
+
+                if ((edge.v->inf && edge.u->inf) || (!edge.v->inf && edge.u->inf)) {
+                    // do nothing?
+                    std::cout << "\n";
+                } else if (edge.v->inf && !edge.u->inf) {
+                    edge.v->dist = edge.u->dist + edge.weight;
+                    edge.v->inf = false;
+                    std::cout << " | setting v dist: " << edge.v->dist << "\n";
+                } else if (edge.v->dist > edge.u->dist + edge.weight) {
+                    edge.v->dist = edge.u->dist + edge.weight;
+                    std::cout << " | updating v dist: " << edge.v->dist << "\n";
+                } else {
+                    std::cout << "\n";
+                }
+            }
+        }
+
+        std::cout << "final iteration\n";
+
+        for (Edge &edge : graph.edges) {
+            std::cout << "    " << edge.u->id() << " -> " << edge.v->id() << " w: " << edge.weight << " | u.dist: ";
+
+
+            if (edge.u->inf) {
+                std::cout << "inf";
+            } else {
+                std::cout << edge.u->dist;
+            }
+
+            std::cout << " | v.dist: ";
+
+            if (edge.v->inf) {
+                std::cout << "inf";
+            } else {
+                std::cout << edge.v->dist;
+            }
+
+
+            if ((edge.v->inf && edge.u->inf) || (!edge.v->inf && edge.u->inf)) {
+                // do nothing?
+                std::cout << "\n";
+            } else if (edge.v->inf && !edge.u->inf) {
+                cycle_set.insert(edge.v->id());
+                std::cout << " in negative cycle\n";
+            } else if (edge.v->dist > edge.u->dist + edge.weight) {
+                cycle_set.insert(edge.v->id());
+                std::cout << " in negative cycle\n";
+            } else {
+                std::cout << "\n";
+            }
+        }
+
+        if (cycle_set.size() > 0) {
+            std::cout << "found negative cycle:";
+
+            for (std::size_t id : cycle_set) {
+                std::cout << " " << id;
+            }
+
+            std::cout << "\n";
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     Options options;
 
@@ -173,7 +284,6 @@ int main(int argc, char* argv[]) {
         for (std::size_t count = 0; count < nodes_len; ++count) {
             Node n;
             n.value = count;
-            n.visited = false;
 
             graph.nodes.push_back(n);
             graph.neighbors.push_back({});
@@ -238,6 +348,8 @@ int main(int argc, char* argv[]) {
             std::cout << "\n";
         }
     }
+
+    calc_graph(graph);
 
     return 0;
 }
