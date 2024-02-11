@@ -29,11 +29,6 @@ struct Node {
     bool inf = true;
     bool visited = false;
 
-    void reset_dist() {
-        this->dist = 0;
-        this->inf = true;
-    }
-
     void set_dist(int value) {
         this->dist = value;
         this->inf = false;
@@ -51,14 +46,6 @@ struct Edge {
     Node* u = nullptr;
     Node* v = nullptr;
     int weight = 1;
-
-    Edge reverse() {
-        Edge rtn;
-        rtn.u = this->v;
-        rtn.v = this->u;
-
-        return rtn;
-    }
 };
 
 typedef std::vector<Node> NodeList;
@@ -76,26 +63,6 @@ struct Graph {
     NodeList nodes = {};
     EdgeList edges = {};
     NeighborMap neighbors = {};
-
-    /**
-     * creates a reverse edge list and neighbors map
-     */
-    EdgeNeighborPair reverse() {
-        NeighborMap rev_neighbors;
-        EdgeList rev_edges;
-
-        rev_neighbors.reserve(this->nodes.size());
-        rev_edges.reserve(this->edges.size());
-
-        for (Edge edge : this->edges) {
-            Edge rev_edge = edge.reverse();
-
-            rev_neighbors[rev_edge.u->value].push_back(rev_edge.v);
-            rev_edges.push_back(rev_edge);
-        }
-
-        return {rev_edges, rev_neighbors};
-    }
 };
 
 /**
@@ -154,46 +121,19 @@ std::string spacer(std::size_t len) {
     return rtn;
 }
 
-/**
- * performs BFS to determine what nodes are connected to the given source node.
- * returns an index list of the nodes found
- */
-std::vector<std::size_t> bfs_search(Graph &graph, std::size_t source) {
-    std::vector<std::size_t> rtn;
-    std::queue<std::size_t> queue;
+bool set_contains(std::set<size_t> &to_check, const std::size_t& key) {
+    std::set<std::size_t>::iterator iter = to_check.find(key);
 
-    for (Node &n : graph.nodes) {
-        n.visited = false;
-    }
-
-    graph.nodes[source].visited = true;
-
-    rtn.push_back(source);
-    queue.push(source);
-
-    while (!queue.empty()) {
-        std::size_t current = queue.front();
-        queue.pop();
-
-        for (Node *n : graph.neighbors[current]) {
-            if (n->visited) {
-                continue;
-            }
-
-            n->visited = true;
-
-            queue.push(n->value);
-            rtn.push_back(n->value);
-        }
-    }
-
-    return rtn;
+    return iter != to_check.end();
 }
 
 void calc_graph(Options& options, Graph &graph) {
     std::set<std::size_t> in_negative_cycle;
     std::set<std::size_t> cycle_set;
     std::size_t iters = graph.nodes.size() - 1;
+
+    // bfs node queue
+    std::queue<std::size_t> queue;
 
     for (Node &src : graph.nodes) {
         cycle_set.clear();
@@ -204,7 +144,9 @@ void calc_graph(Options& options, Graph &graph) {
 
         // run bellman-ford
         for (Node &n : graph.nodes) {
-            n.reset_dist();
+            n.dist = 0;
+            n.inf = false;
+            n.visited = false;
         }
 
         src.set_dist(0);
@@ -235,21 +177,23 @@ void calc_graph(Options& options, Graph &graph) {
 
                 // because the infinity is indicated by a flag on the node
                 // the check is different than the original algorithm
+
+                // if u is at infinity the check will always be false, skip
+                if (edge.u->inf) {
+                    continue;
+                }
+
                 if (edge.v->inf) {
-                    if (!edge.u->inf) {
-                        edge.v->set_dist(edge.u->dist + edge.weight);
+                    edge.v->set_dist(edge.u->dist + edge.weight);
 
-                        if (options.verbose) {
-                            std::cout << " | setting v dist: " << edge.v->dist;
-                        }
+                    if (options.verbose) {
+                        std::cout << " | setting v dist: " << edge.v->dist;
                     }
-                } else {
-                    if (!edge.u->inf && edge.v->dist > edge.u->dist + edge.weight) {
-                        edge.v->set_dist(edge.u->dist + edge.weight);
+                } else if (edge.v->dist > edge.u->dist + edge.weight) {
+                    edge.v->set_dist(edge.u->dist + edge.weight);
 
-                        if (options.verbose) {
-                            std::cout << " | setting v dist: " << edge.v->dist;
-                        }
+                    if (options.verbose) {
+                        std::cout << " | setting v dist: " << edge.v->dist;
                     }
                 }
 
@@ -283,21 +227,29 @@ void calc_graph(Options& options, Graph &graph) {
                 }
             }
 
+            if (edge.u->inf) {
+                continue;
+            }
+
             if (edge.v->inf) {
-                if (!edge.u->inf) {
-                    cycle_set.insert(edge.v->value);
-
-                    if (options.verbose) {
-                        std::cout << " in negative cycle";
-                    }
+                if (set_contains(in_negative_cycle, edge.v->value)) {
+                    continue;
                 }
-            } else {
-                if (!edge.u->inf && edge.v->dist > edge.u->dist + edge.weight) {
-                    cycle_set.insert(edge.v->value);
 
-                    if (options.verbose) {
-                        std::cout << " in negative cycle";
-                    }
+                cycle_set.insert(edge.v->value);
+
+                if (options.verbose) {
+                    std::cout << " in negative cycle";
+                }
+            } else if (edge.v->dist > edge.u->dist + edge.weight) {
+                if (set_contains(in_negative_cycle, edge.v->value)) {
+                    continue;
+                }
+
+                cycle_set.insert(edge.v->value);
+
+                if (options.verbose) {
+                    std::cout << " in negative cycle";
                 }
             }
 
@@ -306,32 +258,52 @@ void calc_graph(Options& options, Graph &graph) {
             }
         }
 
-        if (cycle_set.size() > 0) {
-            // there were nodes found to have a negative cycle so we will see
-            // what other nodes we can reach from them
+        if (cycle_set.size() == 0) {
+            continue;
+        }
+
+        // there were nodes found to have a negative cycle so we will see
+        // what other nodes we can reach from them
+        if (options.verbose) {
+            std::cout << "found negative cycles:\n";
+        }
+
+        for (std::size_t id : cycle_set) {
+            in_negative_cycle.insert(id);
+
             if (options.verbose) {
-                std::cout << "found negative cycles:\n";
+                std::cout << "    " << graph.nodes[id].id() << " ->";
             }
 
-            for (std::size_t id : cycle_set) {
-                std::vector<std::size_t> attached = bfs_search(graph, id);
+            // BFS to determine what nodes are connected to the given 
+            // source node.
+            graph.nodes[id].visited = true;
 
-                if (options.verbose) {
-                    std::cout << "    " << graph.nodes[id].id() << " ->";
-                }
+            queue.push(id);
 
-                for (std::size_t attached_id : attached) {
-                    in_negative_cycle.insert(attached_id);
+            while (!queue.empty()) {
+                std::size_t current = queue.front();
+                queue.pop();
+
+                for (Node *n : graph.neighbors[current]) {
+                    if (n->visited) {
+                        continue;
+                    }
+
+                    n->visited = true;
+
+                    queue.push(n->value);
+                    in_negative_cycle.insert(n->value);
 
                     if (options.verbose) {
-                        std::cout << " " << graph.nodes[attached_id].id();
+                        std::cout << " " << graph.nodes[n->value].id();
                     }
                 }
             }
+        }
 
-            if (options.verbose) {
-                std::cout << "\n";
-            }
+        if (options.verbose) {
+            std::cout << "\n";
         }
     }
 
