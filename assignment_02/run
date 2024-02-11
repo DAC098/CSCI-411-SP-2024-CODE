@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [[ ! -f "./main" ]]; then
+    echo "missing main executable"
+    exit 1
+fi
+
+run_main() {
+    if [[ ! -f "./tests/${1}.in" ]]; then
+        echo "input file not found: ${1}.in"
+        return 1
+    fi
+
+    if [[ -f "./tests/${1}.out" ]]; then
+        echo "checking ${1}"
+
+        cat "./tests/${1}.in" | ./main > "./output"
+
+        if (( $? != 0 )); then
+            echo "non 0 return from main"
+            cat "./output"
+
+            return 1
+        fi
+
+        diff "./output" "./tests/${1}.out"
+    else
+        echo "running ${1}"
+
+        cat "./tests/${1}.in" | ./main
+    fi
+
+    return 0
+}
+
+if [[ $1 = "all" ]]; then
+    for index in $(seq 1 100); do
+        padded=$(printf %3s $index | tr ' ' 0)
+        name="02_test_${padded}"
+
+        run_main $name
+
+        if (( $? != 0 )); then
+            echo "test ${name} failed"
+
+            exit 1
+        fi
+    done
+else
+    run_main $1
+fi
