@@ -1,1 +1,6 @@
-workspace = { members = ["assignment_01"] }
+[workspace]
+members = ["assignment_01"]
+
+[workspace.dependencies.clap]
+version = "4.3.0"
+features = ["derive"]
