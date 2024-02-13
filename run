@@ -1,0 +1,71 @@
+#!/bin/bash
+
+if [[ $3 = "rust" ]]; then
+    cargo build -p $1 --release
+
+    if (( $? != 0 )); then
+        echo "failed to create main for $1"
+        exit 0
+    fi
+else
+    cd ./$1 && make main
+
+    if (( $? != 0 )); then
+        echo "failed to create main for $1"
+        exit 0
+    fi
+fi
+
+run_cpp() {
+    in_file="./${1}/tests/${2}.in"
+    out_file="./${1}/tests/${2}.out"
+    output="./${1}/output"
+    main="./${1}/main"
+
+    if [[ $3 = "rust" ]]; then
+        main="./target/release/${1}"
+    fi
+
+    if [[ ! -f $in_file ]]; then
+        echo "input file not found: ${2}.in"
+        return 1
+    fi
+
+    if [[ -f $out_file ]]; then
+        echo "checking ${2}"
+
+        cat $in_file | $main > $output
+
+        if (( $? != 0 )); then
+            echo "non 0 return from main"
+            cat $output
+
+            return 1
+        fi
+
+        diff $out_file $output
+    else
+        echo "running ${1}"
+
+        cat $in_file | $main
+    fi
+
+    return 0
+}
+
+if [[ $2 = "all" ]]; then
+    for index in $(seq 1 100); do
+        padded=$(printf %3s $index | tr ' ' 0)
+        name="01_test_${padded}"
+
+        run_cpp $1 $name $3
+
+        if (( $? != 0 )); then
+            echo "test ${name} failed"
+
+            exit 1
+        fi
+    done
+else
+    run_cpp $1 $2 $3
+fi

@@ -1,28 +1,31 @@
-use std::collections::HashMap;
+use std::default::Default;
 
-use clap::Parser;
+#[derive(Debug)]
+struct GroupData {
+    count: usize,
+    incoming: bool,
+    outgoing: bool,
+}
 
-#[derive(Debug, Parser)]
-struct Options {
-    #[arg(short, long)]
-    verbose: bool
+impl Default for GroupData {
+    fn default() -> Self {
+        GroupData {
+            count: 0,
+            incoming: false,
+            outgoing: false,
+        }
+    }
 }
 
 #[derive(Debug)]
 struct Node {
-    index: usize,
-    value: i32,
     visited: bool,
     scc: Option<usize>,
 }
 
-impl Node {
-    fn new(index: usize) -> Node {
-        let value = (index as i32) + 1;
-
+impl Default for Node {
+    fn default() -> Self {
         Node {
-            index,
-            value,
             visited: false,
             scc: None
         }
@@ -30,13 +33,13 @@ impl Node {
 }
 
 #[derive(Debug)]
-struct Edge<'a> {
-    u: &'a Node,
-    v: &'a Node,
+struct Edge {
+    u: usize,
+    v: usize,
 }
 
-impl<'a> Edge<'a> {
-    fn reverse(&self) -> Edge<'a> {
+impl Edge {
+    fn reverse(&self) -> Edge {
         Edge {
             u: self.v,
             v: self.u,
@@ -45,36 +48,36 @@ impl<'a> Edge<'a> {
 }
 
 type NodeList = Vec<Node>;
-type NodeRefList<'a> = Vec<&'a Node>;
-type EdgeList<'a> = Vec<Edge<'a>>;
-type NeighborMap<'a> = Vec<NodeRefList<'a>>;
+type NodeRefList = Vec<usize>;
+type EdgeList = Vec<Edge>;
+type NeighborMap = Vec<NodeRefList>;
 
 #[derive(Debug)]
-struct Graph<'a> {
+struct Graph {
     nodes: NodeList,
-    edges: EdgeList<'a>,
-    neighbors: NeighborMap<'a>,
+    edges: EdgeList,
+    neighbors: NeighborMap,
 }
 
-impl<'a> Graph<'a> {
+impl Graph {
     fn new() -> Self {
         Graph {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-            neighbors: Vec::new(),
+            nodes: NodeList::new(),
+            edges: EdgeList::new(),
+            neighbors: NeighborMap::new(),
         }
     }
 
-    fn reverse(&self) -> (EdgeList<'a>, NeighborMap<'a>) {
-        let mut neighbors = vec![Vec::new(); self.neighbors.len()];
-        let mut edges = Vec::new();
+    fn reverse(&self) -> (EdgeList, NeighborMap) {
+        let mut neighbors = vec![NodeRefList::new(); self.neighbors.len()];
+        let mut edges = EdgeList::new();
 
         edges.reserve(self.edges.len());
 
         for edge in &self.edges {
             let rev = edge.reverse();
 
-            neighbors[rev.u.index].push(rev.v);
+            neighbors[rev.u].push(rev.v);
             edges.push(rev);
         }
 
@@ -97,14 +100,103 @@ fn parse_int_line(line: &str) -> Option<Vec<i32>> {
     Some(rtn)
 }
 
-fn calc_graph<'a>(opts: &Options, mut graph: Graph<'a>) {
+fn dfs_scc(nodes: &mut NodeList, neighbors: &NeighborMap, v: &usize, list: &mut NodeRefList) {
+    nodes[*v].visited = true;
+
+    for u in &neighbors[*v] {
+        if !nodes[*u].visited {
+            dfs_scc(nodes, neighbors, u, list);
+        }
+    }
+
+    list.push(*v);
+}
+
+fn dfs_assign(nodes: &mut NodeList, rev_neighbors: &NeighborMap, v: &usize, scc: usize) {
+    nodes[*v].scc = Some(scc);
+
+    for u in &rev_neighbors[*v] {
+        if nodes[*u].scc.is_none() {
+            dfs_assign(nodes, rev_neighbors, u, scc);
+        }
+    }
+}
+
+fn calc_graph(mut graph: Graph) {
+    let mut list = NodeRefList::new();
+
+    for index in 0..graph.nodes.len() {
+        if !graph.nodes[index].visited {
+            dfs_scc(
+                &mut graph.nodes,
+                &graph.neighbors,
+                &index,
+                &mut list
+            );
+        }
+    }
+
+    let mut groups = Vec::new();
+    let (_rev_edges, rev_neighbors) = graph.reverse();
+
+    for index in list.iter().rev() {
+        if graph.nodes[*index].scc.is_none() {
+            let scc = groups.len();
+
+            dfs_assign(
+                &mut graph.nodes,
+                &rev_neighbors,
+                index,
+                scc
+            );
+
+            groups.push(GroupData::default());
+        }
+    }
+
+    for u in 0..graph.nodes.len() {
+        let u_scc = (&graph.nodes[u].scc).unwrap();
+
+        for v in &graph.neighbors[u] {
+            let v_scc = (&graph.nodes[*v].scc).unwrap();
+
+            if u_scc == v_scc {
+                continue;
+            }
+
+            groups[v_scc].incoming = true;
+            groups[u_scc].outgoing = true;
+        }
+
+        groups[u_scc].count += 1;
+    }
+
+    let mut group_a = 0usize;
+    let mut group_b = 0usize;
+    let mut group_c = 0usize;
+
+    for group in groups {
+        if group.incoming && group.outgoing {
+            group_c += group.count;
+        } else if group.outgoing {
+            group_a += group.count;
+        } else if group.incoming {
+            group_b += group.count;
+        } else {
+            group_c += group.count;
+        }
+    }
+
+    print!(
+        "Number of nodes and number of edges: \nAdd {} edges: \n|A| = {}, |B| = {}, |C| = {}",
+        graph.edges.len(),
+        group_a,
+        group_b,
+        group_c,
+    );
 }
 
 fn main() {
-    let options = Options::parse();
-
-    println!("{:#?}", options);
-
     let mut lines = std::io::stdin().lines();
     let mut graph = Graph::new();
     let nodes;
@@ -145,22 +237,18 @@ fn main() {
             check
         };
 
-        println!("nodes: {} | edges: {}", nodes, edges);
-
         graph.nodes.reserve(nodes);
         graph.edges.reserve(edges);
         graph.neighbors.reserve(nodes);
 
-        for index in 0..nodes {
-            graph.nodes.push(Node::new(index));
+        for _index in 0..nodes {
+            graph.nodes.push(Node::default());
             graph.neighbors.push(Vec::new());
         }
     }
 
     while let Some(check) = lines.next() {
         let line = check.expect("failed to read input from stdin");
-
-        println!("line: \"{}\"", line);
 
         let Some(found) = parse_int_line(&line) else {
             panic!("invalid graph edge: \"{}\"", line);
@@ -184,23 +272,17 @@ fn main() {
         u -= 1;
         v -= 1;
 
-        let Some(u_ref) = graph.nodes.get(u) else {
+        if u >= graph.nodes.len() {
             panic!("edge u index not found: {} \"{}\"", u, line);
-        };
-        let Some(v_ref) = graph.nodes.get(v) else {
-            panic!("edge v index not found: {} \"{}\"", v, line);
-        };
+        }
 
-        graph.edges.push(Edge {
-            u: u_ref,
-            v: v_ref
-        });
-        graph.neighbors[u].push(&graph.nodes[v]);
+        if v >= graph.nodes.len() {
+            panic!("edge v index not found: {} \"{}\"", v, line);
+        }
+
+        graph.edges.push(Edge { u, v });
+        graph.neighbors[u].push(v);
     }
 
-    println!("{:#?}", graph);
-
-    let (rev_edges, rev_neighbors) = graph.reverse();
-
-    println!("reverse edges: {:#?}\nreverse neighbors: {:#?}", rev_edges, rev_neighbors);
+    calc_graph(graph);
 }
