@@ -1,0 +1,8 @@
+#!/bin/bash
+
+for fs in $(ls -p | grep -v /); do
+    if [[ $fs == 01_* ]]; then
+        rename=$(echo $fs | sed 's/^[0-9]\{2\}_\(\.*\)/\1/')
+        mv $fs $rename
+    fi
+done

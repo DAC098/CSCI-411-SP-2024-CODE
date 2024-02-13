@@ -8,7 +8,7 @@ if [[ $3 = "rust" ]]; then
         exit 0
     fi
 else
-    cd ./$1 && make main
+    make $1
 
     if (( $? != 0 )); then
         echo "failed to create main for $1"
@@ -19,7 +19,7 @@ fi
 run_cpp() {
     in_file="./${1}/tests/${2}.in"
     out_file="./${1}/tests/${2}.out"
-    output="./${1}/output"
+    output="./${1}/main.output"
     main="./${1}/main"
 
     if [[ $3 = "rust" ]]; then
@@ -27,7 +27,7 @@ run_cpp() {
     fi
 
     if [[ ! -f $in_file ]]; then
-        echo "input file not found: ${2}.in"
+        echo "input file not found: ${in_file}"
         return 1
     fi
 
@@ -56,7 +56,7 @@ run_cpp() {
 if [[ $2 = "all" ]]; then
     for index in $(seq 1 100); do
         padded=$(printf %3s $index | tr ' ' 0)
-        name="01_test_${padded}"
+        name="test_${padded}"
 
         run_cpp $1 $name $3
 
