@@ -1,5 +1,9 @@
 [workspace]
-members = ["assignment_01"]
+members = [
+    "assignment_01",
+    "assignment_02",
+    "assignment_03",
+]
 
 [workspace.dependencies.clap]
 version = "4.3.0"

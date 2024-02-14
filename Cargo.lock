@@ -5,3 +5,11 @@ version = 3
 [[package]]
 name = "assignment_01"
 version = "0.1.0"
+
+[[package]]
+name = "assignment_02"
+version = "0.1.0"
+
+[[package]]
+name = "assignment_03"
+version = "0.1.0"
