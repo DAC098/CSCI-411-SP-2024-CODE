@@ -74,14 +74,20 @@ where
 }
 
 fn main() {
-    let mut top_down = false;
+    let mut method_to_use = 0;
     let mut run_checks = false;
 
     for arg in std::env::args() {
         match arg.as_str() {
             "--run-checks" => {
                 run_checks = true;
-            }
+            },
+            "--bottom-up-2" => {
+                method_to_use = 1;
+            },
+            "--top-down" => {
+                method_to_use = 2;
+            },
             _ => {}
         }
     }
@@ -166,126 +172,152 @@ fn main() {
         checks.push(value);
     }
 
-
-    if top_down {
-        let mut memorized_top_down = vec![State::Unset; max_size + 1];
-
-        if cfg!(debug_assertions) {
-            for dnmn in &denominations {
-                print!("{} ", dnmn);
-            }
-
-            println!("");
+    if run_checks {
+        for dnmn in &denominations {
+            print!("{} ", dnmn);
         }
 
-        denominations.reverse();
+        println!("");
+    }
 
-        for value in &checks {
-            std::thread::scope(|scope| {
-                let result = std::thread::Builder::new()
-                    .name(format!("top_down_{}", value))
-                    .stack_size(512 * 1024 * 1024)
-                    .spawn_scoped(scope, || {
-                        calc_top_down2(*value, &denominations, &mut memorized_top_down, 1);
-                    });
+    match method_to_use {
+        0 => {
+            let mut running_count = vec![0; denominations.len()];
+            let mut memorized_bottom_up = vec![(None, 0); max_size + 1];
 
-                if let Err(err) = result {
-                    println!("thread error: {:#?}", err);
+            calc_bottom_up(&denominations, &mut memorized_bottom_up);
+
+            for value in &checks {
+                let mut index = *value;
+
+                loop {
+                    let (Some(v), lu) = &memorized_bottom_up[index] else {
+                        break;
+                    };
+
+                    if *v == 0 {
+                        break;
+                    }
+
+                    running_count[*lu] += 1;
+                    index = index - denominations[*lu];
                 }
-            });
 
-            match &memorized_top_down[*value] {
-                State::Set(change) => {
-                    if run_checks {
-                        print!("{} => {}: ", value, change.total);
-                        let mut count = 0;
+                for count in &running_count {
+                    print!("{} ", count);
+                }
 
-                        for dnmn_index in (denominations.len() - 1)..=0 {
-                            print!("{} ", change.amounts[dnmn_index]);
+                println!("");
 
-                            count += denominations[dnmn_index] * change.amounts[dnmn_index];
+                running_count.fill(0);
+            }
+        },
+        1 => {
+            let mut memorized_bottom_up = vec![State::Unset; max_size + 1];
+
+            calc_bottom_up_alt(&denominations, &mut memorized_bottom_up);
+
+            for value in &checks {
+                match &memorized_bottom_up[*value] {
+                    State::Set(change) => {
+                        if run_checks {
+                            print!("{} => {}: ", value, change.total);
+                            let mut count = 0;
+
+                            for dnmn_index in 0..denominations.len() {
+                                print!("{} ", change.amounts[dnmn_index]);
+
+                                count += denominations[dnmn_index] * change.amounts[dnmn_index];
+                            }
+
+                            print!("= {}", count);
+
+                            if count != *value {
+                                println!(" invalid");
+                            } else {
+                                println!(" valid");
+                            }
+                        } else {
+                            for dnmn in &change.amounts {
+                                print!("{} ", dnmn);
+                            }
+
+                            println!("");
+                        }
+                    },
+                    State::Invalid => {
+                        for _ in &denominations {
+                            print!("0 ");
                         }
 
-                        println!("= {}", count);
-                    } else {
+                        println!("");
+                    },
+                    State::Unset => unreachable!(),
+                }
+            }
+        },
+        2 => {
+            let mut memorized_top_down = vec![State::Unset; max_size + 1];
+
+            denominations.reverse();
+
+            for value in &checks {
+                std::thread::scope(|scope| {
+                    let result = std::thread::Builder::new()
+                        .name(format!("top_down_{}", value))
+                        .stack_size(512 * 1024 * 1024)
+                        .spawn_scoped(scope, || {
+                            calc_top_down(*value, &denominations, &mut memorized_top_down, 1);
+                        });
+
+                    if let Err(err) = result {
+                        println!("thread error: {:#?}", err);
+                    }
+                });
+
+                match &memorized_top_down[*value] {
+                    State::Set(change) => {
+                        if run_checks {
+                            print!("{} => {}: ", value, change.total);
+                            let mut count = 0;
+
+                            for dnmn_index in (denominations.len() - 1)..=0 {
+                                print!("{} ", change.amounts[dnmn_index]);
+
+                                count += denominations[dnmn_index] * change.amounts[dnmn_index];
+                            }
+
+                            println!("= {}", count);
+                        } else {
+                            for dnmn in change.amounts.iter().rev() {
+                                print!("{} ", dnmn);
+                            }
+
+                            println!("");
+                        }
+
                         for dnmn in change.amounts.iter().rev() {
                             print!("{} ", dnmn);
                         }
 
                         println!("");
-                    }
-
-                    for dnmn in change.amounts.iter().rev() {
-                        print!("{} ", dnmn);
-                    }
-
-                    println!("");
-                },
-                State::Invalid => {
-                    for _ in &denominations {
-                        print!("0 ");
-                    }
-
-                    println!("");
-                },
-                State::Unset => unreachable!(),
-            }
-        }
-    } else {
-        let mut memorized_bottom_up = vec![State::Unset; max_size + 1];
-
-        calc_bottom_up(&denominations, &mut memorized_bottom_up);
-
-        if run_checks {
-            for dnmn in &denominations {
-                print!("{} ", dnmn);
-            }
-
-            println!("");
-        }
-
-        for value in &checks {
-            match &memorized_bottom_up[*value] {
-                State::Set(change) => {
-                    if run_checks {
-                        print!("{} => {}: ", value, change.total);
-                        let mut count = 0;
-
-                        for dnmn_index in 0..denominations.len() {
-                            print!("{} ", change.amounts[dnmn_index]);
-
-                            count += denominations[dnmn_index] * change.amounts[dnmn_index];
-                        }
-
-                        print!("= {}", count);
-
-                        if count != *value {
-                            println!(" invalid");
-                        } else {
-                            println!(" valid");
-                        }
-                    } else {
-                        for dnmn in &change.amounts {
-                            print!("{} ", dnmn);
+                    },
+                    State::Invalid => {
+                        for _ in &denominations {
+                            print!("0 ");
                         }
 
                         println!("");
-                    }
-                },
-                State::Invalid => {
-                    for _ in &denominations {
-                        print!("0 ");
-                    }
-
-                    println!("");
-                },
-                State::Unset => unreachable!(),
+                    },
+                    State::Unset => unreachable!(),
+                }
             }
-        }
+        },
+        _ => unreachable!(),
     }
 }
 
-fn calc_top_down2(change: usize, denominations: &[usize], memorized: &mut [State], context: usize) -> State {
+fn calc_top_down(change: usize, denominations: &[usize], memorized: &mut [State], context: usize) -> State {
     if change == 0 {
         #[cfg(debug_assertions)]
         println!("{} {} base case", context, change);
@@ -313,7 +345,7 @@ fn calc_top_down2(change: usize, denominations: &[usize], memorized: &mut [State
         #[cfg(debug_assertions)]
         println!("{} {} sub: {}", context, change, denominations[dnmn]);
 
-        let mut result = match calc_top_down2(change - denominations[dnmn], denominations, memorized, context + 1) {
+        let mut result = match calc_top_down(change - denominations[dnmn], denominations, memorized, context + 1) {
             State::Set(change) => change,
             State::Unset => unreachable!(),
             State::Invalid => continue,
@@ -354,7 +386,7 @@ fn calc_top_down2(change: usize, denominations: &[usize], memorized: &mut [State
     memorized[change].clone()
 }
 
-fn calc_bottom_up(denominations: &[usize], memorized: &mut [State]) {
+fn calc_bottom_up_alt(denominations: &[usize], memorized: &mut [State]) {
     let dnmn_len = denominations.len();
 
     memorized[0] = State::Set(Change::new(dnmn_len));
@@ -388,19 +420,19 @@ fn calc_bottom_up(denominations: &[usize], memorized: &mut [State]) {
 
             min = match min {
                 State::Set(curr) => {
-                    #[cfg(debug_assertions)]
-                    print!(" {} < {}", curr.total, cmp.total);
+                    let mut rtn = cmp.clone();
+                    rtn.total += 1;
+                    rtn.amounts[dnmn] += 1;
 
-                    if curr.total <= cmp.total {
+                    #[cfg(debug_assertions)]
+                    print!(" {} < {}", curr.total, rtn.total);
+
+                    if curr.total <= rtn.total {
                         #[cfg(debug_assertions)]
                         println!(" no update");
 
                         State::Set(curr)
                     } else {
-                        let mut rtn = cmp.clone();
-                        rtn.total += 1;
-                        rtn.amounts[dnmn] += 1;
-
                         #[cfg(debug_assertions)]
                         println!(" updating to {:?}", rtn);
 
@@ -428,26 +460,37 @@ fn calc_bottom_up(denominations: &[usize], memorized: &mut [State]) {
     }
 }
 
-fn calc_bottom_up_check(value: i32, dnmn: &[i32]) -> Vec<i32> {
-    let mut rtn = vec![0; (value as usize) + 1];
+fn calc_bottom_up(dnmn: &[usize], mem: &mut [(Option<usize>, usize)]) {
+    mem[0] = (Some(0), 0);
 
-    for i in 1..rtn.len() {
-        let mut min = i32::MAX;
+    for i in 1..mem.len() {
+        let mut min = None;
+        let mut last_used = 0;
 
-        for d in dnmn {
-            let d_usize = *d as usize;
-
-            if i - d_usize < 0 {
+        for d in 0..dnmn.len() {
+            if dnmn[d] > i {
                 continue;
             }
 
-            let cmp = rtn[i - d_usize] + 1;
+            let (Some(check), _) = &mem[i - dnmn[d]] else {
+                continue;
+            };
 
-            min = if min < cmp { min } else {cmp };
+            let cmp = check + 1;
+
+            min = Some(if let Some(min) = min {
+                if min <= cmp {
+                    min
+                } else {
+                    last_used = d;
+                    cmp
+                }
+            } else {
+                last_used = d;
+                cmp
+            });
         }
 
-        rtn[i] = min;
+        mem[i] = (min, last_used);
     }
-
-    rtn
 }
