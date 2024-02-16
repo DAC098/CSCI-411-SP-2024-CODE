@@ -1,15 +1,13 @@
+use std::str::FromStr;
+
 struct Change {
     total: usize,
-    amounts: Vec<(i32, usize)>,
+    amounts: Vec<usize>,
 }
 
 impl Change {
     fn new(denominations: &[i32]) -> Self {
-        let mut amounts = Vec::with_capacity(denominations.len());
-
-        for value in denominations {
-            amounts.push((*value, 0));
-        }
+        let amounts = vec![0; denominations.len()];
 
         Change {
             total: 0,
@@ -19,9 +17,9 @@ impl Change {
 }
 
 enum State {
+    Set(Change),
     Unset,
     Invalid,
-    Set(Change)
 }
 
 impl Default for State {
@@ -30,7 +28,10 @@ impl Default for State {
     }
 }
 
-fn parse_int_line_fill(line: &str, list: &mut Vec<i32>) -> bool {
+fn parse_line_fill<T>(line: &str, list: &mut Vec<T>) -> bool
+where
+    T: FromStr
+{
     let split = line.split(' ');
 
     for value in split {
@@ -44,10 +45,13 @@ fn parse_int_line_fill(line: &str, list: &mut Vec<i32>) -> bool {
     true
 }
 
-fn parse_int_line(line: &str) -> Option<Vec<i32>> {
+fn parse_line<T>(line: &str) -> Option<Vec<T>>
+where
+    T: FromStr
+{
     let mut rtn = Vec::new();
 
-    if parse_int_line_fill(line, &mut rtn) {
+    if parse_line_fill(line, &mut rtn) {
         Some(rtn)
     } else {
         None
@@ -55,35 +59,9 @@ fn parse_int_line(line: &str) -> Option<Vec<i32>> {
 }
 
 fn main() {
-    if false {
-        let checks = [
-            (3, 27, vec![1, 5, 10, 25]),
-            (3, 27, vec![25, 10, 5, 1]),
-            (4, 20, vec![3,8,11]),
-            (3, 11, vec![2,3,5]),
-            (3, 17, vec![2,3,5,7]),
-            (4, 15, vec![2,3,7]),
-            (-1, 7, vec![3,5]),
-            (-1, 1, vec![2,3,5])
-        ];
-
-        for (expected, change, denominations) in checks {
-            let result = calc_top_down(change, &denominations);
-
-            assert!(
-                result == expected,
-                "result: {} expected: {} change: {}\ndenominations: {:?}",
-                result,
-                expected,
-                change,
-                denominations
-            );
-        }
-    }
-
     let mut lines = std::io::stdin().lines();
-    let mut denominations: Vec<i32> = Vec::new();
-    let mut checks: Vec<i32> = Vec::new();
+    let mut denominations: Vec<usize> = Vec::new();
+    let mut checks: Vec<usize> = Vec::new();
     let mut total_denominations: usize = 0;
     let mut total_checks: usize = 0;
 
@@ -94,7 +72,7 @@ fn main() {
 
         let change_line = check.expect("failed to read input from stdin");
 
-        let Some(change_data) = parse_int_line(&change_line) else {
+        let Some(change_data) = parse_line::<i32>(&change_line) else {
             panic!("invalid change line provided: \"{}\"", change_line);
         };
 
@@ -130,7 +108,7 @@ fn main() {
 
         let check_line = check.expect("failed to read input from stdin");
 
-        if !parse_int_line_fill(&check_line, &mut denominations) {
+        if !parse_line_fill(&check_line, &mut denominations) {
             panic!("invalid denominations line provided: \"{}\"", check_line);
         }
     }
@@ -140,7 +118,7 @@ fn main() {
     while let Some(line) = lines.next() {
         let line_check = line.expect("failed to read input from stdin");
 
-        let Ok(value): Result<i32, _> = line_check.parse() else {
+        let Ok(value): Result<usize, _> = line_check.parse() else {
             panic!("invalid check value provided: \"{}\"", line_check);
         };
 
@@ -148,14 +126,15 @@ fn main() {
             panic!("cannot calculate negative change: {}", value);
         }
 
-        if (value as usize) > max_size {
-            max_size = (value as usize);
+        if value > max_size {
+            max_size = value;
         }
 
         checks.push(value);
     }
 
-    let mut memorized = vec![0; max_size + 1];
+    let mut memorized_top_down = vec![Some(0); max_size + 1];
+    let mut memorized_bottom_up = vec![0; max_size + 1];
 
     for value in &checks {
         std::thread::scope(|scope| {
@@ -165,9 +144,9 @@ fn main() {
                 .spawn_scoped(scope, || {
                     println!("calculating change for: {}", value);
 
-                    let calc_result = calc_top_down_recurse(*value, &denominations, &mut memorized, 1);
+                    let calc_result = calc_top_down(*value, &denominations, &mut memorized_top_down, 1);
 
-                    println!("result: {}", calc_result);
+                    println!("result: {}", calc_result.unwrap_or(0));
                 });
 
             if let Err(err) = result {
@@ -175,53 +154,87 @@ fn main() {
             }
         });
     }
+
+    calc_bottom_up(&denominations, &mut memorized_bottom_up);
+
+    for value in &checks {
+        println!("calculated change for: {} | {}",
+            value,
+            memorized_bottom_up[*value as usize]
+        );
+    }
 }
 
-fn calc_top_down(change: i32, denominations: &[i32], memorized: &mut [isize], context: usize) -> isize {
-    if change < 0 {
-        #[cfg(debug_assertions)]
-        println!("{:-<width$} change: {} not found", context, change, width=(context + 1));
-
-        return -1;
-    } else if change == 0 {
+fn calc_top_down(change: usize, denominations: &[usize], memorized: &mut [Option<usize>], context: usize) -> Option<usize> {
+    if change == 0 {
         #[cfg(debug_assertions)]
         println!("{:-<width$} change: {}", context, change, width=(context + 1));
 
-        return 0;
+        return Some(0);
     }
 
-    let index = (change - 1) as usize;
-
-    if memorized[index] != 0 {
+    if memorized[change].is_some() {
         #[cfg(debug_assertions)]
-        println!("{:-<width$} change: {} memorized: {}", context, change, memorized[index], width=(context + 1));
+        println!("{:-<width$} change: {} memorized: {}", context, change, memorized[change], width=(context + 1));
 
-        return memorized[index];
+        return memorized[change].clone();
     }
 
-    let mut did_update = false;
-    let mut lowest = isize::MAX;
+    let mut lowest: Option<usize> = None;
 
     for v in denominations {
+        if *v > change {
+            continue;
+        }
+
         #[cfg(debug_assertions)]
         println!("{:-<width$} change: {} sub: {}", context, change, v, width=(context + 1));
 
-        let result = calc_top_down_recurse(change - *v, denominations, memorized, context + 1);
+        let Some(result) = calc_top_down(change - *v, denominations, memorized, context + 1) else {
+            continue;
+        };
 
-        if result != -1 && result < lowest {
-            did_update = true;
-            lowest = 1 + result;
-        }
+        lowest = Some(if let Some(l) = lowest {
+            if result < l {
+                result + 1
+            } else {
+                l
+            }
+        } else {
+            result + 1
+        });
     }
 
-    if did_update {
-        memorized[index] = lowest;
-    } else {
-        memorized[index] = -1;
-    }
+    memorized[change] = lowest;
 
     #[cfg(debug_assertions)]
-    println!("{:-<width$} result: {}", context, memorized[index], width=(context + 1));
+    println!("{:-<width$} result: {}", context, memorized[change], width=(context + 1));
 
-    memorized[index]
+    memorized[change].clone()
+}
+
+fn calc_bottom_up(denominations: &[usize], memorized: &mut [usize]) {
+    let mut min = None::<usize>;
+
+    for index in 1..memorized.len() {
+        for dnmn in denominations {
+            if *dnmn > index {
+                break;
+            }
+
+            min = Some(if let Some(m) = min {
+                if m < memorized[index - *dnmn] {
+                    m
+                } else {
+                    memorized[index - *dnmn]
+                }
+            } else {
+                memorized[index - *dnmn]
+            } + 1);
+        }
+
+        if let Some(min) = min.take() {
+            memorized[index] = min;
+        }
+    }
 }
