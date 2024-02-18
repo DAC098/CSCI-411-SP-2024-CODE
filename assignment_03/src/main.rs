@@ -92,11 +92,12 @@ fn main() {
         }
     }
 
+    let mut total_denominations: usize = 0;
+    let mut total_checks: usize = 0;
+    let mut max_size: usize = 0;
     let mut lines = std::io::stdin().lines();
     let mut denominations: Vec<usize> = Vec::new();
     let mut checks: Vec<usize> = Vec::new();
-    let mut total_denominations: usize = 0;
-    let mut total_checks: usize = 0;
 
     {
         let Some(check) = lines.next() else {
@@ -105,7 +106,7 @@ fn main() {
 
         let change_line = check.expect("failed to read input from stdin");
 
-        let Some(change_data) = parse_line::<i32>(&change_line) else {
+        let Some(change_data) = parse_line::<usize>(&change_line) else {
             panic!("invalid change line provided: \"{}\"", change_line);
         };
 
@@ -113,25 +114,12 @@ fn main() {
             panic!("too few change values: \"{}\"", change_line);
         }
 
-        total_denominations = {
-            let Ok(check): Result<usize, _> = change_data[0].try_into() else {
-                panic!("amount of denominations specified is invalid: {}", change_data[0]);
-            };
+        if change_data[0] == 0 {
+            panic!("amount of denominations specified is invalid: {}", change_data[0]);
+        }
 
-            if check == 0 {
-                panic!("amount of denominations specified is invalid: {}", change_data[0]);
-            }
-
-            check
-        };
-
-        total_checks = {
-            let Ok(check): Result<usize, _> = change_data[1].try_into() else {
-                panic!("amount of checks specified is invalid: {}", change_data[1]);
-            };
-
-            check
-        };
+        total_denominations = change_data[0];
+        total_checks = change_data[0];
     }
 
     {
@@ -146,20 +134,12 @@ fn main() {
         }
     }
 
-    let mut max_size: usize = 0;
+    if denominations.len() != total_denominations {
+        panic!("denominations provided nodes not match the specified amount");
+    }
 
     while let Some(line) = lines.next() {
         let line_check = line.expect("failed to read input from stdin");
-
-        {
-            let mut chars = line_check.chars();
-
-            if let Some(ch) = chars.next() {
-                if ch == '#' {
-                    continue;
-                }
-            }
-        }
 
         let Ok(value): Result<usize, _> = line_check.parse() else {
             panic!("invalid check value provided: \"{}\"", line_check);
@@ -170,6 +150,10 @@ fn main() {
         }
 
         checks.push(value);
+    }
+
+    if checks.len() != total_checks {
+        panic!("checks provided does not match the specified amount\n");
     }
 
     if run_checks {
@@ -222,6 +206,7 @@ fn main() {
                     State::Set(change) => {
                         if run_checks {
                             print!("{} => {}: ", value, change.total);
+
                             let mut count = 0;
 
                             for dnmn_index in 0..denominations.len() {
@@ -463,9 +448,12 @@ fn calc_bottom_up_alt(denominations: &[usize], memorized: &mut [State]) {
 fn calc_bottom_up(dnmn: &[usize], mem: &mut [(Option<usize>, usize)]) {
     mem[0] = (Some(0), 0);
 
+    let mut min = None;
+    let mut last_used = 0;
+
     for i in 1..mem.len() {
-        let mut min = None;
-        let mut last_used = 0;
+        min = None;
+        last_used = 0;
 
         for d in 0..dnmn.len() {
             if dnmn[d] > i {
