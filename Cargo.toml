@@ -3,6 +3,7 @@ members = [
     "assignment_01",
     "assignment_02",
     "assignment_03",
+    "assignment_04",
 ]
 
 [workspace.dependencies.clap]
