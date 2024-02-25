@@ -116,22 +116,23 @@ fn longest_inc_dsc_subsequence(list: &[i32]) -> (Calced, Calced) {
 }
 
 fn longest_bitonic_subsequence(list: &[i32]) -> usize {
-    /*
+    let start = std::time::Instant::now();
+
     let mut bitonic_max = 0;
 
-    println!("calculating increasing bitonic");
+    //println!("calculating increasing bitonic");
 
     {
-        let (lis_max, lis_calced) = longest_increasing_subsequence(list);
+        let (_lis_max, lis_calced) = longest_increasing_subsequence(list);
 
         for index in 0..list.len() {
-            let (lds_max, lds_calced) = longest_decreasing_subsequence(&list[index..list.len()]);
+            let (lds_max, _lds_calced) = longest_decreasing_subsequence(&list[index..list.len()]);
 
             let summed = lds_max + lis_calced[index] - 1;
 
-            println!("index: {}\n{:?} {} | {:?} {}", index, &list[0..=index], lis_calced[index], &list[index..list.len()], lds_max);
-            println!("{:?} | {:?}", &lis_calced[0..=index], lds_calced);
-            println!("{} + {} - 1 = {}", lds_max, lis_calced[index], summed);
+            //println!("index: {}\n{:?} {} | {:?} {}", index, &list[0..=index], lis_calced[index], &list[index..list.len()], lds_max);
+            //println!("{:?} | {:?}", &lis_calced[0..=index], lds_calced);
+            //println!("{} + {} - 1 = {}", lds_max, lis_calced[index], summed);
 
             if summed > bitonic_max {
                 bitonic_max = summed;
@@ -139,26 +140,32 @@ fn longest_bitonic_subsequence(list: &[i32]) -> usize {
         }
     }
 
-    println!("calculating decreasing bitonic");
+    //println!("calculating decreasing bitonic");
 
     {
-        let (lds_max, lds_calced) = longest_decreasing_subsequence(list);
+        let (_lds_max, lds_calced) = longest_decreasing_subsequence(list);
 
         for index in 0..list.len() {
-            let (lis_max, lis_calced) = longest_increasing_subsequence(&list[index..list.len()]);
+            let (lis_max, _lis_calced) = longest_increasing_subsequence(&list[index..list.len()]);
 
             let summed = lis_max + lds_calced[index] - 1;
 
-            println!("index: {}\n{:?} {} | {:?} {}", index, &list[0..=index], lds_calced[index], &list[index..list.len()], lis_max);
-            println!("{:?} | {:?}", &lds_calced[0..=index], lis_calced);
-            println!("{} + {} - 1 = {}", lis_max, lds_calced[index], summed);
+            //println!("index: {}\n{:?} {} | {:?} {}", index, &list[0..=index], lds_calced[index], &list[index..list.len()], lis_max);
+            //println!("{:?} | {:?}", &lds_calced[0..=index], lis_calced);
+            //println!("{} + {} - 1 = {}", lis_max, lds_calced[index], summed);
 
             if summed > bitonic_max {
                 bitonic_max = summed;
             }
         }
     }
-    */
+
+    let duration = start.elapsed();
+
+    println!("1 duration: {:?}", duration);
+
+    let start = std::time::Instant::now();
+
     let mut test_bitonic_max = 0;
 
     {
@@ -182,58 +189,79 @@ fn longest_bitonic_subsequence(list: &[i32]) -> usize {
         }
     }
 
-    println!("test_bitonic_max: {}", test_bitonic_max);
+    let duration = start.elapsed();
+
+    println!("2 duration: {:?}", duration);
+
+    let start = std::time::Instant::now();
 
     let mut bitonic_max = 0;
     let rev_len = list.len() - 1;
 
-    let mut ins_bit_lens = vec![(1usize, 1usize); list.len()];
-    let mut dsc_bit_lens = vec![(1usize, 1usize); list.len()];
+    let mut ins_bit_lens = vec![(0usize, 0usize); list.len()];
+    let mut dsc_bit_lens = vec![(0usize, 0usize); list.len()];
+    ins_bit_lens[0].0 = 1;
+    ins_bit_lens[rev_len].1 = 1;
+    dsc_bit_lens[0].0 = 1;
+    dsc_bit_lens[rev_len].1 = 1;
 
     for index in 1..list.len() {
+        let rev_index = rev_len - index;
+
         for subindex in 0..index {
+            let rev_subindex = rev_len - subindex;
+
             // increasing bitonic
             if list[subindex] < list[index] && ins_bit_lens[subindex].0 > ins_bit_lens[index].0 {
-                ins_bit_lens[index].0 = ins_bit_lens[index].0;
+                ins_bit_lens[index].0 = ins_bit_lens[subindex].0;
             }
 
-            if list[rev_len - subindex] < list[rev_len - index] && ins_bit_lens[rev_len - subindex].1 > ins_bit_lens[rev_len - index].1 {
-                ins_bit_lens[rev_len - index].1 = ins_bit_lens[rev_len - subindex].1;
+            if list[rev_subindex] < list[rev_index] && ins_bit_lens[rev_subindex].1 > ins_bit_lens[rev_index].1 {
+                ins_bit_lens[rev_index].1 = ins_bit_lens[rev_subindex].1;
             }
 
             // decreasing bitonic
             if list[subindex] > list[index] && dsc_bit_lens[subindex].0 > dsc_bit_lens[index].0 {
-                dsc_bit_lens[index].0 = dsc_bit_lens[index].0;
+                dsc_bit_lens[index].0 = dsc_bit_lens[subindex].0;
             }
 
-            if list[rev_len - subindex] > list[rev_len - index] && dsc_bit_lens[rev_len - subindex].1 > dsc_bit_lens[rev_len - index].1 {
-                dsc_bit_lens[rev_len - index].1 = dsc_bit_lens[rev_len - subindex].1;
+            if list[rev_subindex] > list[rev_index] && dsc_bit_lens[rev_subindex].1 > dsc_bit_lens[rev_index].1 {
+                dsc_bit_lens[rev_index].1 = dsc_bit_lens[rev_subindex].1;
             }
         }
 
         ins_bit_lens[index].0 += 1;
-        ins_bit_lens[rev_len - index].1 += 1;
+        ins_bit_lens[rev_index].1 += 1;
         dsc_bit_lens[index].0 += 1;
-        dsc_bit_lens[rev_len - index].1 += 1;
-    }
+        dsc_bit_lens[rev_index].1 += 1;
 
-    println!("increasing: {:?}", ins_bit_lens);
-    println!("decreasing: {:?}", dsc_bit_lens);
+        if index == rev_index {
+            let lis_value = ins_bit_lens[index].0 + ins_bit_lens[index].1 - 1;
+            let lds_value = dsc_bit_lens[index].0 + dsc_bit_lens[index].1 - 1;
 
-    for index in 0..list.len() {
-        let lis_value = ins_bit_lens[index].0 + ins_bit_lens[index].1 - 1;
-        let lds_value = dsc_bit_lens[index].0 + dsc_bit_lens[index].1 - 1;
-
-        if lis_value > lds_value {
-            if lis_value > bitonic_max {
-                bitonic_max = lis_value;
+            if lis_value > lds_value {
+                if lis_value > bitonic_max {
+                    bitonic_max = lis_value;
+                }
+            } else {
+                if lds_value > bitonic_max {
+                    bitonic_max = lds_value;
+                }
             }
-        } else {
-            if lds_value > bitonic_max {
-                bitonic_max = lds_value;
-            }
+        } else if index > rev_index {
+            bitonic_max = [
+                ins_bit_lens[index].0 + ins_bit_lens[index].1 - 1,
+                ins_bit_lens[rev_index].0 + ins_bit_lens[rev_index].1 - 1,
+                dsc_bit_lens[index].0 + dsc_bit_lens[index].1 - 1,
+                dsc_bit_lens[rev_index].0 + dsc_bit_lens[rev_index].1 - 1,
+                bitonic_max
+            ].into_iter().max().unwrap();
         }
     }
+
+    let duration = start.elapsed();
+
+    println!("3 duration: {:?}", duration);
 
     bitonic_max
 }
@@ -247,15 +275,9 @@ fn main() {
     for test in list {
         let lens = test.0;
 
-        println!("test: ({}, {}) {:?}", lens.0, lens.1, test.1);
+        let (lis_max, _lis_calced) = longest_increasing_subsequence(&test.1);
 
-        let (lis_max, lis_calced) = longest_increasing_subsequence(&test.1);
-
-        println!("LIS: {} {:?}", lis_max, lis_calced);
-
-        let (lds_max, lds_calced) = longest_decreasing_subsequence(&test.1);
-
-        println!("LDS: {} {:?}", lds_max, lds_calced);
+        let (lds_max, _lds_calced) = longest_decreasing_subsequence(&test.1);
 
         assert_eq!(lis_max, lens.0);
         assert_eq!(lds_max, lens.1);
