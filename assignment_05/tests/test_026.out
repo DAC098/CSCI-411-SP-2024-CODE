@@ -1,0 +1,2 @@
+Enter the number of hotels and the ideal number of miles to travel per day: Enter 512 hotel distances each on a separate line: Hotels to visit: 11 20 29 39 48 55 63 69 76 88 100 109 114 124 131 141 153 159 170 177 186 192 202 213 229 244 253 259 268 276 288 294 303 313 326 337 347 357 367 373 382 397 402 410 427 435 446 458 464 474 484 493 502 512 
+Total penalty: 4576

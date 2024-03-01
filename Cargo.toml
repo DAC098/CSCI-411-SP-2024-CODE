@@ -1,9 +1,10 @@
 [workspace]
+resolver = "2"
 members = [
     "assignment_01",
     "assignment_02",
     "assignment_03",
-    "assignment_04",
+    "assignment_04", "assignment_05",
 ]
 
 [workspace.dependencies.clap]
