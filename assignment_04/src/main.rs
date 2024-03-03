@@ -267,6 +267,7 @@ fn longest_bitonic_subsequence(list: &[i32]) -> usize {
 }
 
 fn main() {
+    /*
     let list = [
         ((3, 3), vec![2,7,4,3,8]),
         ((4, 2), vec![2,4,3,7,4,5]),
@@ -300,4 +301,68 @@ fn main() {
 
         println!("max: {}", max);
     }
+    */
+
+    let check =     [5,8,8,3,4,1,7,-3,2,9,12];
+    let check_rev = [12,9,2,-3,7,1,4,3,8,8,5];
+    let mut lis_sum = [0,0,0,0,0,0,0,0,0,0,0];
+    let mut lds_sum = [0,0,0,0,0,0,0,0,0,0,0];
+
+    print!("   base:");
+
+    for v in check {
+        print!(" {:2}", v);
+    }
+
+    print!("\n\n    lis:");
+
+    let (lis_max, lis_calced) = longest_increasing_subsequence(&check);
+
+    for index in 0..lis_calced.len() {
+        print!(" {:2}", lis_calced[index]);
+        lis_sum[index] += lis_calced[index];
+    }
+
+    print!("\nrev lis:");
+
+    let (lis_max, mut lis_calced) = longest_increasing_subsequence(&check_rev);
+    lis_calced.reverse();
+
+    for index in 0..lis_calced.len() {
+        print!(" {:2}", lis_calced[index]);
+        lis_sum[index] += lis_calced[index];
+    }
+
+    print!("\n    sum:");
+
+    for v in lis_sum {
+        print!(" {:2}", v - 1);
+    }
+
+    print!("\n\n    lds:");
+
+    let (lds_max, lds_calced) = longest_decreasing_subsequence(&check);
+
+    for index in 0..lds_calced.len() {
+        print!(" {:2}", lds_calced[index]);
+        lds_sum[index] += lds_calced[index];
+    }
+
+    print!("\nrev lds:");
+
+    let (lds_max, mut lds_calced) = longest_decreasing_subsequence(&check_rev);
+    lds_calced.reverse();
+
+    for index in 0..lds_calced.len() {
+        print!(" {:2}", lds_calced[index]);
+        lds_sum[index] += lds_calced[index];
+    }
+
+    print!("\n    sum:");
+
+    for v in lds_sum {
+        print!(" {:2}", v - 1);
+    }
+
+    println!("");
 }
