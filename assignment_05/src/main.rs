@@ -3,12 +3,14 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 struct Node {
     visited: bool,
+    include: bool,
 }
 
 impl Default for Node {
     fn default() -> Self {
         Node {
             visited: false,
+            include: false,
         }
     }
 }
@@ -47,75 +49,120 @@ impl Graph {
     }
 }
 
-fn calc_graph(graph: Graph) {
-    let mut stack = Vec::new();
-    stack.push(0);
-
-    while let Some(node) = stack.pop() {
-        if graph.nodes[node].visited {
-            continue;
-        }
-
-        let mut pushed_stack = false;
-
-        for children in &graph.neighbors[node] {
-            if graph.nodes[children].visited {
-                continue;
-            }
-
-            stack.push(*children);
-            pushed_stack = true;
-        }
-
-        if pushed_stack {
-            contin
-    }
-}
-
-fn calc_graph_recurse(
+fn calc_graph(
     node: usize,
-    graph: &mut Graph,
-    calced_nodes: &mut Vec<Option<usize>>,
-) -> usize {
-    if graph.neighbors[node].is_empty() {
-        // base case: leaf
-        calced_nodes[node] = Some(0);
-        return 0;
+    node_list: &mut NodeList,
+    neighbors: &NeighborMap,
+    calced_nodes: &mut Vec<usize>,
+    depth: usize,
+) {
+    let spacer = "| ".repeat(depth);
+
+    println!("{spacer}calculating: {}", node + 1);
+
+    let mut with_root = 1;
+    let mut without_root = 0;
+
+    for child in &neighbors[node] {
+        calc_graph(*child, node_list, neighbors, calced_nodes, depth + 1);
+
+        with_root += calced_nodes[*child];
+        without_root += 1;
+
+        for grand in &neighbors[*child] {
+            without_root += calced_nodes[*grand];
+        }
     }
 
-    for child in &graph.neighbors[node] {
-        
+    if with_root <= without_root {
+        println!("{spacer}including {} with: {with_root} without: {without_root}", node + 1);
+        node_list[node].include = true;
+        calced_nodes[node] = with_root;
+    } else {
+        println!("{spacer}excluding {} with: {with_root} without: {without_root}", node + 1);
+        calced_nodes[node] = without_root;
     }
 }
 
 fn main() {
-    let total_nodes = 15;
-    let edges: EdgeList = vec![
-        Edge::from((0,1)),
-        Edge::from((0,2)),
-        Edge::from((0,3)),
-        Edge::from((1,4)),
-        Edge::from((2,5)),
-        Edge::from((3,6)),
-        Edge::from((3,7)),
-        Edge::from((3,6)),
-        Edge::from((4,9)),
-        Edge::from((4,10)),
-        Edge::from((5,11)),
-        Edge::from((5,12)),
-        Edge::from((12,13)),
-        Edge::from((12,14)),
+    let graph_list: Vec<(usize, EdgeList)> = vec![
+        (15, vec![
+            Edge::from((0,1)),
+            Edge::from((0,2)),
+            Edge::from((0,3)),
+            Edge::from((1,4)),
+            Edge::from((2,5)),
+            Edge::from((3,6)),
+            Edge::from((3,7)),
+            Edge::from((3,6)),
+            Edge::from((4,9)),
+            Edge::from((4,10)),
+            Edge::from((5,11)),
+            Edge::from((5,12)),
+            Edge::from((12,13)),
+            Edge::from((12,14)),
+        ]),
+        (18, vec![
+            Edge::from((0,1)),
+            Edge::from((0,2)),
+            Edge::from((0,3)),
+            Edge::from((1,4)),
+            Edge::from((1,5)),
+            Edge::from((2,6)),
+            Edge::from((3,7)),
+            Edge::from((3,8)),
+            Edge::from((3,9)),
+            Edge::from((4,10)),
+            Edge::from((4,11)),
+            Edge::from((6,12)),
+            Edge::from((6,13)),
+            Edge::from((9,14)),
+            Edge::from((9,15)),
+            Edge::from((9,16)),
+            Edge::from((9,17)),
+        ]),
+        (16, vec![
+            Edge::from((0,1)),
+            Edge::from((0,2)),
+            Edge::from((0,3)),
+            Edge::from((1,4)),
+            Edge::from((1,5)),
+            Edge::from((2,6)),
+            Edge::from((3,7)),
+            Edge::from((3,8)),
+            Edge::from((3,9)),
+            Edge::from((4,10)),
+            Edge::from((4,11)),
+            Edge::from((9,12)),
+            Edge::from((9,13)),
+            Edge::from((9,14)),
+            Edge::from((9,15)),
+        ])
     ];
 
-    let mut graph = Graph::new();
-    let mut calced_edges = vec![Node::<usize>; total_nodex];
+    let mut graph_count = 0;
 
-    graph.nodes = vec![Node::default(); total_nodes];
-    graph.neighbors = vec![Vec::new(); total_nodes];
+    for (total_nodes, edges) in graph_list {
+        println!("graph: {}", graph_count + 1);
 
-    for edge in &edges {
-        graph.neighbors[edge.u].push(edge.v);
+        let mut graph = Graph::new();
+        let mut calced_edges = vec![0usize; total_nodes];
+
+        graph.nodes = vec![Node::default(); total_nodes];
+        graph.neighbors = vec![Vec::new(); total_nodes];
+
+        for edge in &edges {
+            graph.neighbors[edge.u].push(edge.v);
+        }
+
+        graph.edges = edges;
+
+        calc_graph(0, &mut graph.nodes, &graph.neighbors, &mut calced_edges, 0);
+
+        for node in 0..graph.nodes.len() {
+            println!("{}: {} included: {}", node + 1, calced_edges[node], graph.nodes[node].include);
+        }
+
+        graph_count += 1;
     }
-
-    graph.edges = edges;
 }
