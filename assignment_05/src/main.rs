@@ -1,15 +1,11 @@
-use std::collections::HashMap;
-
 #[derive(Debug, Clone)]
 struct Node {
-    visited: bool,
     include: bool,
 }
 
 impl Default for Node {
     fn default() -> Self {
         Node {
-            visited: false,
             include: false,
         }
     }
@@ -75,13 +71,69 @@ fn calc_graph(
     }
 
     if with_root <= without_root {
-        println!("{spacer}including {} with: {with_root} without: {without_root}", node + 1);
         node_list[node].include = true;
         calced_nodes[node] = with_root;
     } else {
-        println!("{spacer}excluding {} with: {with_root} without: {without_root}", node + 1);
         calced_nodes[node] = without_root;
     }
+
+    println!("{spacer}{} {} with: {with_root} without: {without_root}", node + 1, node_list[node].include);
+}
+
+#[derive(Clone)]
+struct Calc {
+    best: usize,
+    child: usize,
+}
+
+impl Calc {
+    fn new() -> Self {
+        Calc {
+            best: 0,
+            child: 0
+        }
+    }
+}
+
+impl std::fmt::Display for Calc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}|{}", self.best, self.child)
+    }
+}
+
+fn calc_graph_2(
+    node: usize,
+    node_list: &mut NodeList,
+    neighbors: &NeighborMap,
+    calced: &mut Vec<Calc>,
+    depth: usize
+) {
+    let spacer = "| ".repeat(depth);
+
+    println!("{spacer}calculating: {}", node + 1);
+
+    let mut with_root = 1;
+    let mut without_root = 0;
+    let mut rtn_grand = 0;
+
+    for child in &neighbors[node] {
+        calc_graph_2(*child, node_list, neighbors, calced, depth + 1);
+
+        with_root += calced[*child].best;
+        rtn_grand += calced[*child].best;
+        without_root += 1 + calced[*child].child;
+    }
+
+    calced[node].child = rtn_grand;
+
+    if with_root <= without_root {
+        node_list[node].include = true;
+        calced[node].best = with_root;
+    } else {
+        calced[node].best = without_root;
+    }
+
+    println!("{spacer}{} {} with: {with_root} without: {without_root}", node + 1, node_list[node].include);
 }
 
 fn main() {
@@ -146,7 +198,6 @@ fn main() {
         println!("graph: {}", graph_count + 1);
 
         let mut graph = Graph::new();
-        let mut calced_edges = vec![0usize; total_nodes];
 
         graph.nodes = vec![Node::default(); total_nodes];
         graph.neighbors = vec![Vec::new(); total_nodes];
@@ -157,10 +208,30 @@ fn main() {
 
         graph.edges = edges;
 
-        calc_graph(0, &mut graph.nodes, &graph.neighbors, &mut calced_edges, 0);
+        {
+            println!("calc_graph results:");
 
-        for node in 0..graph.nodes.len() {
-            println!("{}: {} included: {}", node + 1, calced_edges[node], graph.nodes[node].include);
+            let mut calced_edges = vec![0usize; total_nodes];
+
+            calc_graph(0, &mut graph.nodes, &graph.neighbors, &mut calced_edges, 0);
+
+            for node in 0..graph.nodes.len() {
+                println!("{}: {} included: {}", node + 1, calced_edges[node], graph.nodes[node].include);
+                graph.nodes[node].include = false;
+            }
+        }
+
+        {
+            println!("calc_graph_2 results:");
+
+            let mut calced = vec![Calc::new(); total_nodes];
+
+            calc_graph_2(0, &mut graph.nodes, &graph.neighbors, &mut calced, 0);
+
+            for node in 0..graph.nodes.len() {
+                println!("{}: {} included: {}", node + 1, calced[node], graph.nodes[node].include);
+                graph.nodes[node].include = false;
+            }
         }
 
         graph_count += 1;
