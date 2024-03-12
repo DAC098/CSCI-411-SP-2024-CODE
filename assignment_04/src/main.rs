@@ -1,3 +1,39 @@
+use std::str::FromStr;
+
+fn parse_line_fill<T>(line: &str, list: &mut Vec<T>) -> bool
+where
+    T: FromStr
+{
+    let split = line.split(' ');
+
+    for value in split {
+        if value.is_empty() {
+            continue;
+        }
+
+        let Ok(parsed) = value.parse() else {
+            return false;
+        };
+
+        list.push(parsed);
+    }
+
+    true
+}
+
+fn parse_line<T>(line: &str) -> Option<Vec<T>>
+where
+    T: FromStr
+{
+    let mut rtn = Vec::new();
+
+    if parse_line_fill(line, &mut rtn) {
+        Some(rtn)
+    } else {
+        None
+    }
+}
+
 fn longest_increasing_subsequence(list: &[i32]) -> (usize, Vec<usize>) {
     if list.is_empty() {
         return (0, vec![]);
@@ -266,7 +302,7 @@ fn longest_bitonic_subsequence(list: &[i32]) -> usize {
     bitonic_max
 }
 
-fn main() {
+fn lis_lds_main() {
     /*
     let list = [
         ((3, 3), vec![2,7,4,3,8]),
@@ -365,4 +401,124 @@ fn main() {
     }
 
     println!("");
+}
+
+fn min_index(list: &[usize]) -> usize {
+    if list.is_empty() {
+        return 0;
+    }
+
+    let mut curr = 0;
+
+    for index in 1..list.len() {
+        if list[curr] > list[index] {
+            curr = index;
+        }
+    }
+
+    curr
+}
+
+fn edit_distance(a: &[u8], b: &[u8], ins: usize, del: usize, sub: usize) -> Vec<Vec<usize>> {
+    if a.is_empty() || b.is_empty() {
+        return Vec::new();
+    }
+
+    let a_len = a.len() + 1;
+    let b_len = b.len() + 1;
+
+    let mut p = vec![vec![0usize; b_len]; a_len];
+    p[0][0] = 0;
+
+    for index in 1..a_len {
+        p[index][0] = p[index - 1][0] + del;
+    }
+
+    for index in 1..b_len {
+        p[0][index] = p[0][index - 1] + ins;
+    }
+
+    for a_index in 1..a_len {
+        for b_index in 1..b_len {
+            if a[a_index - 1] == b[b_index - 1] {
+                p[a_index][b_index] = p[a_index - 1][b_index - 1];
+            } else {
+                let check = [
+                    p[a_index - 1][b_index - 1] + sub,
+                    p[a_index][b_index - 1] + ins,
+                    p[a_index - 1][b_index] + del
+                ];
+
+                let min_index = min_index(&check);
+
+                p[a_index][b_index] = check[min_index];
+            }
+        }
+    }
+
+    p
+}
+
+fn main() {
+    let mut lines = std::io::stdin().lines();
+    let ins: usize;
+    let del: usize;
+    let sub: usize;
+
+    {
+        let total: usize = {
+            let check = lines.next()
+                .expect("no edit distance data specified")
+                .expect("failed to read input from stdin");
+
+            let Ok(rtn) = check.parse() else {
+                panic!("failed to parse total strings line: \"{}\"", check);
+            };
+
+            rtn
+        };
+
+        let weights_line = lines.next()
+            .expect("missing edit weights")
+            .expect("failed to read input from stdin");
+
+        let weights = parse_line::<usize>(&weights_line)
+            .expect("failed to parse weights line. invalid integer characters providied");
+
+        if weights.len() != 3 {
+            panic!("invalid number of weights provided. expected 3");
+        }
+
+        ins = weights[0];
+        del = weights[1];
+        sub = weights[2];
+    }
+
+    for line in lines {
+        let valid = line.expect("failed to read input from stdin");
+
+        let Some((a, b)) = valid.split_once(' ') else {
+            panic!("invalid test string provided: \"{}\"", valid);
+        };
+
+        if !a.is_ascii() {
+            panic!("string a contains non ascii characters");
+        }
+
+        if !b.is_ascii() {
+            panic!("string b contains non ascii characters");
+        }
+
+        let result = edit_distance(a.as_bytes(), b.as_bytes(), ins, del, sub);
+
+        let edit_value = result[a.len()][b.len()];
+
+        eprintln!("{} {}", a, b);
+
+        for list in result {
+            eprintln!("{:?}", list);
+        }
+
+        eprintln!("result: {}", edit_value);
+    }
 }
