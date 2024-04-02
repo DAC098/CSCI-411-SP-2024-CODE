@@ -13,6 +13,7 @@ struct Change {
     bool is_set = false;
     std::size_t count = 0;
     std::size_t last_used = 0;
+    std::size_t possible = 0;
 };
 
 /**

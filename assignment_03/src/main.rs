@@ -84,13 +84,18 @@ fn main() {
             },
             "--bottom-up-2" => {
                 method_to_use = 1;
-            },
+            }
             "--top-down" => {
                 method_to_use = 2;
-            },
+            }
+            "--bottom-up-unique" => {
+                method_to_use = 3;
+            }
             _ => {}
         }
     }
+
+    println!("method to use: {method_to_use}");
 
     let mut total_denominations: usize = 0;
     let mut total_checks: usize = 0;
@@ -114,13 +119,19 @@ fn main() {
             panic!("too few change values: \"{}\"", change_line);
         }
 
-        if change_data[0] == 0 {
-            panic!("amount of denominations specified is invalid: {}", change_data[0]);
+        total_denominations = change_data[0];
+        total_checks = change_data[1];
+
+        if total_denominations == 0 {
+            panic!("amount of denominations specified is 0");
         }
 
-        total_denominations = change_data[0];
-        total_checks = change_data[0];
+        if total_checks == 0 {
+            panic!("amount of check specified is 0");
+        }
     }
+
+    println!("total denominations: {total_denominations}, total_checks: {total_checks}");
 
     {
         let Some(check) = lines.next() else {
@@ -135,7 +146,7 @@ fn main() {
     }
 
     if denominations.len() != total_denominations {
-        panic!("denominations provided nodes not match the specified amount");
+        panic!("denominations provided nodes not match the specified amount. expected: {total_denominations} given: {}", denominations.len());
     }
 
     while let Some(line) = lines.next() {
@@ -153,12 +164,14 @@ fn main() {
     }
 
     if checks.len() != total_checks {
-        panic!("checks provided does not match the specified amount\n");
+        panic!("checks provided does not match the specified amount. expected: {total_checks} given: {}\nvalues: {checks:?}", checks.len());
     }
 
     if run_checks {
+        print!("denominations:");
+
         for dnmn in &denominations {
-            print!("{} ", dnmn);
+            print!(" {}", dnmn);
         }
 
         println!("");
@@ -295,6 +308,37 @@ fn main() {
                         println!("");
                     },
                     State::Unset => unreachable!(),
+                }
+            }
+        },
+        3 => {
+            let mut memorized_bottom_up_unique = vec![None; max_size + 1];
+
+            calc_bottom_up_unique(&denominations, &mut memorized_bottom_up_unique);
+
+            for value in &checks {
+                print!("unique values for {value}");
+
+                if let Some(unique) = &memorized_bottom_up_unique[*value] {
+                    println!(" = {}", unique.amount);
+
+                    for set in &unique.list {
+                        println!("{set:?}");
+                    }
+                } else {
+                    println!(" = 0");
+                }
+            }
+
+            for (index, maybe_unique) in memorized_bottom_up_unique.iter().enumerate() {
+                if let Some(unique) = maybe_unique {
+                    println!("unique values for {index} = {}", unique.amount);
+
+                    for set in &unique.list {
+                        println!("{set:?}");
+                    }
+                } else {
+                    println!("{index} is unreachable");
                 }
             }
         },
@@ -480,5 +524,66 @@ fn calc_bottom_up(dnmn: &[usize], mem: &mut [(Option<usize>, usize)]) {
         }
 
         mem[i] = (min, last_used);
+    }
+}
+
+#[derive(Clone)]
+struct Unique {
+    list: Vec<Vec<usize>>,
+    amount: usize,
+}
+
+fn calc_bottom_up_unique(dnmn: &[usize], mem: &mut [Option<Unique>]) {
+    mem[0] = Some(Unique {
+        list: Vec::new(),
+        amount: 0,
+    });
+
+    for i in 1..mem.len() {
+        let mut possible = false;
+        let mut sets = Vec::new();
+        let mut amount = 0;
+
+        for d in 0..dnmn.len() {
+            print!("checking {i} dnmn: {}", dnmn[d]);
+
+            if dnmn[d] > i {
+                println!(" greater than value");
+                continue;
+            }
+
+            let Some(prev) = &mem[i - dnmn[d]] else {
+                println!(" previous value not possible");
+                continue;
+            };
+
+            if prev.list.is_empty() {
+                println!(" pushing unique set");
+
+                sets.push(vec![dnmn[d]]);
+                amount += 1;
+            } else {
+                println!(" cloning previous values at {}. total: {}", i - dnmn[d], prev.list.len());
+
+                for set in &prev.list {
+                    let mut cp = set.clone();
+                    cp.push(dnmn[d]);
+
+                    sets.push(cp);
+                }
+
+                amount += prev.amount;
+            }
+
+
+            possible = true;
+        }
+
+        if possible {
+            mem[i] = Some(Unique {
+                list: sets,
+                amount
+            });
+        }
     }
 }
