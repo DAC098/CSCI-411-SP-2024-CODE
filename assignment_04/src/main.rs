@@ -419,51 +419,153 @@ fn min_index(list: &[usize]) -> usize {
     curr
 }
 
-fn edit_distance(a: &[u8], b: &[u8], ins: usize, del: usize, sub: usize) -> Vec<Vec<usize>> {
-    if a.is_empty() || b.is_empty() {
-        return Vec::new();
+type Cost = i64;
+
+#[derive(Clone)]
+enum EditKind {
+    Sub,
+    Ins,
+    Del,
+    Mat,
+}
+
+impl std::fmt::Display for EditKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EditKind::Sub => write!(f, "{}", 's'),
+            EditKind::Ins => write!(f, "{}", 'i'),
+            EditKind::Del => write!(f, "{}", 'd'),
+            EditKind::Mat => write!(f, "{}", 'm'),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct Edit {
+    value: Cost,
+    kind: EditKind,
+}
+
+impl Edit {
+    fn sub(value: Cost) -> Self {
+        Edit { value, kind: EditKind::Sub }
     }
 
-    let a_len = a.len() + 1;
-    let b_len = b.len() + 1;
-
-    let mut p = vec![vec![0usize; b_len]; a_len];
-    p[0][0] = 0;
-
-    for index in 1..a_len {
-        p[index][0] = p[index - 1][0] + del;
+    fn ins(value: Cost) -> Self {
+        Edit { value, kind: EditKind::Ins }
     }
 
-    for index in 1..b_len {
-        p[0][index] = p[0][index - 1] + ins;
+    fn del(value: Cost) -> Self {
+        Edit { value, kind: EditKind::Del }
     }
 
-    for a_index in 1..a_len {
-        for b_index in 1..b_len {
-            if a[a_index - 1] == b[b_index - 1] {
-                p[a_index][b_index] = p[a_index - 1][b_index - 1];
+    fn mat(value: Cost) -> Self {
+        Edit { value, kind: EditKind::Mat }
+    }
+}
+
+impl std::fmt::Display for Edit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.value, self.kind)
+    }
+}
+
+struct EditResult {
+    result: Vec<Vec<Edit>>,
+    longest: usize,
+}
+
+/// finds the minimum edit distance between the two slices
+///
+/// grid layout
+///     =   f   r   o   m
+///   +---+---+---+---+---+
+/// = |   |   |   |   |   |
+///   +---+---+---+---+---+
+/// t |   |   |   |   |   |
+///   +---+---+---+---+---+
+/// o |   |   |   |   |   |
+///   +---+---+---+---+---+
+fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> EditResult {
+    let mut longest = 0;
+    let from_len = from.len() + 1;
+    let to_len = to.len() + 1;
+
+    let mut memory = vec![vec![Edit::mat(0); from_len]; to_len];
+
+    for to_index in 1..to_len {
+        memory[to_index][0] = Edit::ins(memory[to_index - 1][0].value + ins);
+    }
+
+    for from_index in 1..from_len {
+        memory[0][from_index] = Edit::del(memory[0][from_index - 1].value + del);
+    }
+
+    for from_index in 1..from_len {
+        println!("==============================");
+
+        for to_index in 1..to_len {
+            print!("{from_index}:{to_index}");
+
+            if from[from_index - 1] == to[to_index - 1] {
+                println!(" matches");
+
+                memory[to_index][from_index] = Edit::mat(memory[to_index - 1][from_index - 1].value);
             } else {
-                let check = [
-                    p[a_index - 1][b_index - 1] + sub,
-                    p[a_index][b_index - 1] + ins,
-                    p[a_index - 1][b_index] + del
-                ];
+                let mut min = Edit::sub(memory[to_index - 1][from_index - 1].value + sub);
 
-                let min_index = min_index(&check);
+                let curr_del = memory[to_index][from_index - 1].value + del;
+                let curr_ins = memory[to_index - 1][from_index].value + ins;
 
-                p[a_index][b_index] = check[min_index];
+                if curr_del < min.value {
+                    min = Edit::del(curr_del);
+                }
+
+                if curr_ins < min.value {
+                    min = Edit::ins(curr_ins);
+                }
+
+                // for printing
+                {
+                    if min.value == 0 {
+                        if 1 > longest {
+                            longest = 1;
+                        }
+                    } else if min.value < 0 {
+                        let check = min.value.abs().ilog10() + 2;
+
+                        if check > longest {
+                            longest = check;
+                        }
+                    } else {
+                        let check = min.value.ilog10() + 1;
+
+                        if check > longest {
+                            longest = check;
+                        }
+                    }
+                }
+
+                println!(" -> {min}");
+
+                memory[to_index][from_index] = min;
             }
         }
     }
 
-    p
+    println!("==============================");
+
+    EditResult {
+        result: memory,
+        longest: longest as usize,
+    }
 }
 
 fn main() {
     let mut lines = std::io::stdin().lines();
-    let ins: usize;
-    let del: usize;
-    let sub: usize;
+    let ins: Cost;
+    let del: Cost;
+    let sub: Cost;
 
     {
         let total: usize = {
@@ -478,47 +580,151 @@ fn main() {
             rtn
         };
 
-        let weights_line = lines.next()
+        let costs_line = lines.next()
             .expect("missing edit weights")
             .expect("failed to read input from stdin");
 
-        let weights = parse_line::<usize>(&weights_line)
-            .expect("failed to parse weights line. invalid integer characters providied");
+        let costs = parse_line::<Cost>(&costs_line)
+            .expect("failed to parse costs line. invalid intager characters providied");
 
-        if weights.len() != 3 {
-            panic!("invalid number of weights provided. expected 3");
+        if costs.len() != 3 {
+            panic!("invalid number of costs provided. expected 3");
         }
 
-        ins = weights[0];
-        del = weights[1];
-        sub = weights[2];
+        ins = costs[0];
+        del = costs[1];
+        sub = costs[2];
     }
 
     for line in lines {
         let valid = line.expect("failed to read input from stdin");
 
-        let Some((a, b)) = valid.split_once(' ') else {
+        let Some((from, to)) = valid.split_once(' ') else {
             panic!("invalid test string provided: \"{}\"", valid);
         };
 
-        if !a.is_ascii() {
+        if !from.is_ascii() {
             panic!("string a contains non ascii characters");
         }
 
-        if !b.is_ascii() {
+        if !to.is_ascii() {
             panic!("string b contains non ascii characters");
         }
 
-        let result = edit_distance(a.as_bytes(), b.as_bytes(), ins, del, sub);
+        let from_bytes = from.as_bytes();
+        let to_bytes = to.as_bytes();
 
-        let edit_value = result[a.len()][b.len()];
+        let rtn = edit_distance(from_bytes, to_bytes, ins, del, sub);
+        let result = rtn.result;
+        let longest = rtn.longest;
+        let leading_width = (to_bytes.len().ilog10() + 1) as usize;
 
-        eprintln!("{} {}", a, b);
+        let dash_spacer = "-".repeat(longest);
+        let spacer = " ".repeat(longest);
+        let leading_dash_spacer = "-".repeat(leading_width);
+        let leading_spacer = " ".repeat(leading_width);
 
-        for list in result {
-            eprintln!("{:?}", list);
+        print!(" {leading_spacer}    |");
+
+        for col in 0..=from_bytes.len() {
+            print!(" {col:longest$} ");
         }
 
-        eprintln!("result: {}", edit_value);
+        println!("");
+        print!(" {leading_spacer}    |");
+
+        for index in 0..=from_bytes.len() {
+            if index == 0 {
+                print!(" {spacer} ");
+            } else {
+                print!(" {:>longest$} ", char::from(from_bytes[index - 1]));
+            }
+        }
+
+        println!("");
+        print!("-{leading_dash_spacer}----+");
+
+        for _ in 0..=from_bytes.len() {
+            print!("-{dash_spacer}-");
+        }
+
+        println!("");
+
+        for (index, row) in result.iter().enumerate() {
+            if index == 0 {
+                print!(" {index:leading_width$}    |");
+            } else {
+                print!(" {index:leading_width$}  {} |", char::from(to_bytes[index - 1]));
+            }
+
+            for pair in row {
+                print!(" {:longest$}{}", pair.value, pair.kind);
+            }
+
+            println!("");
+        }
+
+        let mut from_index = from_bytes.len();
+        let mut to_index = to_bytes.len();
+        let edit_value = result[to_bytes.len()][from_bytes.len()].value;
+
+        let mut from_output = Vec::new();
+        let mut to_output = Vec::new();
+
+        while from_index != 0 && to_index != 0 {
+            //print!("indexs: {from_index}:{to_index}");
+
+            match result[to_index][from_index].kind {
+                EditKind::Mat => {
+                    //print!(" mat");
+                    from_output.push(from_bytes[from_index - 1]);
+                    to_output.push(to_bytes[to_index - 1]);
+                    from_index -= 1;
+                    to_index -= 1;
+                }
+                EditKind::Sub => {
+                    //print!(" sub");
+                    from_output.push(from_bytes[from_index - 1]);
+                    to_output.push(to_bytes[to_index - 1]);
+                    from_index -= 1;
+                    to_index -= 1;
+                }
+                EditKind::Ins => {
+                    //print!(" ins");
+                    from_output.push(b'_');
+                    to_output.push(to_bytes[to_index - 1]);
+                    to_index -= 1;
+                }
+                EditKind::Del => {
+                    //print!(" del");
+                    from_output.push(from_bytes[from_index - 1]);
+                    to_output.push(b'_');
+                    from_index -= 1;
+                },
+            }
+
+            //println!(" -> {from_index}:{to_index}");
+        }
+
+        while from_index != 0 {
+            from_output.push(from_bytes[from_index - 1]);
+            to_output.push(b'_');
+            from_index -= 1;
+        }
+
+        while to_index != 0 {
+            from_output.push(b'_');
+            to_output.push(to_bytes[to_index - 1]);
+            to_index -= 1;
+        }
+
+        from_output.reverse();
+        to_output.reverse();
+
+        println!(
+            "{}\n{}\n{edit_value}",
+            std::str::from_utf8(&from_output).unwrap(),
+            std::str::from_utf8(&to_output).unwrap()
+        );
     }
 }

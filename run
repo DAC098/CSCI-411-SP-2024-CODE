@@ -28,6 +28,7 @@ run_cpp() {
     in_file="./${1}/tests/${2}.in"
     out_file="./${1}/tests/${2}.out"
     output="./${1}/main.output"
+    diff_output="./${1}/diff.output"
     main="./${1}/main"
 
     if [[ $3 == "rust" ]]; then
@@ -39,7 +40,7 @@ run_cpp() {
 
     if [[ ! -f $in_file ]]; then
         echo "input file not found: ${in_file}"
-        return 1
+        return 2
     fi
 
     if [[ -f $out_file ]]; then
@@ -49,7 +50,7 @@ run_cpp() {
             if (( $? != 0 )); then
                 echo "non 0 return from main"
 
-                return 1
+                return 2
             fi
 
             echo "----- expected output -----"
@@ -63,10 +64,24 @@ run_cpp() {
                 echo "non 0 return from main"
                 cat $output
 
-                return 1
+                return 2
             fi
 
-            diff $out_file $output
+            diff $out_file $output > $diff_output
+
+            if (( $? != 0 )); then
+                echo "================================================================================"
+                cat $diff_output
+                echo "================================================================================"
+
+                if (( $? > 1 )); then
+                    echo "diff command failed"
+
+                    return 2
+                fi
+
+                return 1
+            fi
         fi
     else
         echo "running ${1}"
@@ -78,18 +93,28 @@ run_cpp() {
 }
 
 if [[ $2 == "all" ]]; then
+    fail_count=0
+
     for index in $(seq 1 100); do
         padded=$(printf %3s $index | tr ' ' 0)
         name="test_${padded}"
 
         run_cpp $1 $name $3
 
-        if (( $? != 0 )); then
+        if (( $? == 1 )); then
             echo "test ${name} failed"
+
+            fail_count=$(($fail_count + 1))
+        elif (( $? == 2 )); then
+            echo "test ${name} errored"
 
             exit 1
         fi
     done
+
+    if (( $fail_count > 0 )); then
+        echo "$fail_count test(s) failed"
+    fi
 else
     run_cpp $1 $2 $3
 fi
