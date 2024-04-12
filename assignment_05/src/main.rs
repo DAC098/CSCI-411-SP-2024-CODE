@@ -1,3 +1,5 @@
+use common;
+
 #[derive(Debug, Clone)]
 struct Node {
     include: bool,
@@ -136,7 +138,7 @@ fn calc_graph_2(
     println!("{spacer}{} {} with: {with_root} without: {without_root}", node + 1, node_list[node].include);
 }
 
-fn main() {
+fn graph_main() {
     let graph_list: Vec<(usize, EdgeList)> = vec![
         (15, vec![
             Edge::from((0,1)),
@@ -236,4 +238,142 @@ fn main() {
 
         graph_count += 1;
     }
+}
+
+type Distance = i64;
+type Cost = i64;
+
+struct CostResult {
+    result: Vec<(usize, Cost)>,
+    largest: usize,
+}
+
+fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
+    let mut memory: Vec<(usize, Cost)> = vec![(0, 0); hotels.len() + 1];
+    let mut largest = 0;
+
+    for memory_index in 1..memory.len() {
+        memory[memory_index] = (
+            memory_index - 1,
+            (200 - hotels[memory_index - 1]).pow(2),
+        );
+
+        for hotel_index in 0..(memory_index - 1) {
+            let penalty = (200 - (hotels[memory_index - 1] - hotels[hotel_index])).pow(2);
+            let prev = memory[hotel_index].1 + penalty;
+
+            if prev < memory[memory_index].1 {
+                memory[memory_index] = (hotel_index, prev);
+            }
+        }
+
+        let check = common::get_int_len(memory[memory_index].1);
+
+        if check > largest {
+            largest = check;
+        }
+    }
+
+    CostResult {
+        result: memory,
+        largest: largest as usize,
+    }
+}
+
+fn main() {
+    let mut lines = std::io::stdin().lines();
+    let mut travel = 0;
+    let mut expected = 0;
+    let mut hotels: Vec<Distance> = Vec::new();
+
+    {
+        let check = lines.next()
+            .expect("no header specified")
+            .expect("failed to read input from stdin");
+
+        let values = common::parse_line::<i64>(&check)
+            .expect("failed to parse header line");
+
+        if values.len() != 2 {
+            panic!("expected to integers in header line");
+        }
+
+        if values[0] <= 0 {
+            panic!("invalid expected hotels amount: {}", values[0]);
+        }
+
+        expected = values[0] as usize;
+        travel = values[1];
+
+        hotels.reserve(expected);
+    }
+
+    let mut hotel_largest: usize = 0;
+
+    for line in lines {
+        let valid = line.expect("failed to read input from stdin");
+
+        let Ok(dist) = valid.parse() else {
+            panic!("failed to parse hotel distance. line: \"{valid}\"");
+        };
+
+        let len = common::get_int_len(dist);
+
+        if len > hotel_largest {
+            hotel_largest = len;
+        }
+
+        hotels.push(dist);
+    }
+
+    println!("travel: {travel}");
+
+    if hotels.len() != hotels.capacity() {
+        panic!("number of hotels does not match expected amount. expected: {expected}");
+    }
+
+    let calculated= calc_hotel_distances(&hotels, travel);
+    let result = calculated.result;
+    let largest = if hotel_largest > calculated.largest {
+        hotel_largest
+    } else {
+        calculated.largest
+    };
+    let spacer = " ".repeat(largest);
+
+    print!("index:");
+
+    for index in 0..result.len() {
+        if index == 0 {
+            print!(" {spacer}");
+        } else {
+            print!(" {:largest$}", index - 1);
+        }
+    }
+
+    print!("\n dist:");
+
+    for index in 0..result.len() {
+        if index == 0 {
+            print!(" {spacer}");
+        } else {
+            print!(" {:largest$}", hotels[index - 1]);
+        }
+    }
+
+    print!("\n cost:");
+
+    for index in 0..result.len() {
+        print!(" {:largest$}", result[index].1);
+    }
+
+    print!("\n prev:");
+
+    for index in 0..result.len() {
+        print!(" {:largest$}", result[index].0);
+    }
+
+    let next_index = result.len() - 1;
+
+    println!("\nTotal Penalty: {}", result[result.len() - 1].1);
 }

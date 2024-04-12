@@ -6,7 +6,11 @@ members = [
     "assignment_03",
     "assignment_04",
     "assignment_05",
+    "common",
 ]
+
+[workspace.dependencies.common]
+path = "./common"
 
 [workspace.dependencies.clap]
 version = "4.3.0"
