@@ -1,0 +1,14 @@
+Enter the number of nodes and the number of edges separated by a space: Enter m edges (u,v) and their weights: 
+0
+1
+2
+3
+4
+5
+6
+The distance matrix for G: 
+0 2 1 1 2 
+1 0 2 2 3 
+2 1 0 2 1 
+INF INF INF 0 1 
+INF INF INF 1 0 

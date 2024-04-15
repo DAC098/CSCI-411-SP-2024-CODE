@@ -7,6 +7,10 @@ members = [
     "assignment_04",
     "assignment_05",
     "common",
+    "floyd-warshall",
+    "huffman_encoding",
+    "leaf_partition",
+    "tree_vc",
 ]
 
 [workspace.dependencies.common]
