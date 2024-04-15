@@ -243,31 +243,46 @@ fn graph_main() {
 type Distance = i64;
 type Cost = i64;
 
+#[derive(Debug, Clone)]
+struct HotelCost {
+    cost: Cost,
+    hotel: usize,
+}
+
+impl std::default::Default for HotelCost {
+    fn default() -> Self {
+        HotelCost {
+            cost: 0,
+            hotel: 0,
+        }
+    }
+}
+
+#[derive(Debug)]
 struct CostResult {
-    result: Vec<(usize, Cost)>,
+    result: Vec<HotelCost>,
     largest: usize,
 }
 
 fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
-    let mut memory: Vec<(usize, Cost)> = vec![(0, 0); hotels.len() + 1];
+    let mut memory: Vec<HotelCost> = vec![HotelCost::default(); hotels.len() + 1];
     let mut largest = 0;
 
     for memory_index in 1..memory.len() {
-        memory[memory_index] = (
-            memory_index - 1,
-            (200 - hotels[memory_index - 1]).pow(2),
-        );
+        memory[memory_index].cost = (travel - hotels[memory_index - 1]).pow(2);
+        memory[memory_index].hotel = memory_index;
 
         for hotel_index in 0..(memory_index - 1) {
-            let penalty = (200 - (hotels[memory_index - 1] - hotels[hotel_index])).pow(2);
-            let prev = memory[hotel_index].1 + penalty;
+            let penalty = (travel - (hotels[memory_index - 1] - hotels[hotel_index])).pow(2);
+            let prev = memory[hotel_index].cost + penalty;
 
-            if prev < memory[memory_index].1 {
-                memory[memory_index] = (hotel_index, prev);
+            if prev < memory[memory_index].cost {
+                memory[memory_index].cost = prev;
+                memory[memory_index].hotel = hotel_index + 1;
             }
         }
 
-        let check = common::get_int_len(memory[memory_index].1);
+        let check = common::get_int_len(memory[memory_index].cost);
 
         if check > largest {
             largest = check;
@@ -364,16 +379,37 @@ fn main() {
     print!("\n cost:");
 
     for index in 0..result.len() {
-        print!(" {:largest$}", result[index].1);
+        print!(" {:largest$}", result[index].cost);
     }
 
     print!("\n prev:");
 
     for index in 0..result.len() {
-        print!(" {:largest$}", result[index].0);
+        print!(" {:largest$}", result[index].hotel);
     }
 
-    let next_index = result.len() - 1;
+    print!("\n");
 
-    println!("\nTotal Penalty: {}", result[result.len() - 1].1);
+    let mut next_index = result.len() - 1;
+    let mut visited = Vec::new();
+
+    while next_index != 0 {
+        visited.push(next_index);
+
+        if result[next_index].hotel == next_index {
+            break;
+        } else {
+            next_index = result[next_index].hotel;
+        }
+    }
+
+    visited.reverse();
+
+    print!("Hotels to visit:");
+
+    for hotel in visited {
+        print!(" {hotel}");
+    }
+
+    println!("\nTotal penalty: {}", result[result.len() - 1].cost);
 }
