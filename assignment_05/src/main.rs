@@ -1,3 +1,5 @@
+use std::io::Write as _;
+
 use common;
 
 #[derive(Debug, Clone)]
@@ -272,7 +274,7 @@ fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
         memory[memory_index].cost = (travel - hotels[memory_index - 1]).pow(2);
         memory[memory_index].hotel = memory_index;
 
-        for hotel_index in 0..(memory_index - 1) {
+        for hotel_index in 0..memory_index {
             let penalty = (travel - (hotels[memory_index - 1] - hotels[hotel_index])).pow(2);
             let prev = memory[hotel_index].cost + penalty;
 
@@ -296,12 +298,31 @@ fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
 }
 
 fn main() {
+    let mut logging = false;
+    let mut args = std::env::args();
+    args.next();
+
+    loop {
+        let Some(arg) = args.next() else {
+            break;
+        };
+
+        if arg == "--log" {
+            logging = true;
+        }
+    }
+
     let mut lines = std::io::stdin().lines();
     let mut travel = 0;
     let mut expected = 0;
     let mut hotels: Vec<Distance> = Vec::new();
 
     {
+        print!("Enter the number of hotels and the ideal number of miles to travel per day: ");
+        std::io::stdout()
+            .flush()
+            .expect("failed to flush stdout");
+
         let check = lines.next()
             .expect("no header specified")
             .expect("failed to read input from stdin");
@@ -325,6 +346,11 @@ fn main() {
 
     let mut hotel_largest: usize = 0;
 
+    print!("Enter {expected} hotel distances each on a separate line: ");
+    std::io::stdout()
+        .flush()
+        .expect("failed to flush stdout");
+
     for line in lines {
         let valid = line.expect("failed to read input from stdin");
 
@@ -341,7 +367,9 @@ fn main() {
         hotels.push(dist);
     }
 
-    println!("travel: {travel}");
+    if logging {
+        println!("travel: {travel}");
+    }
 
     if hotels.len() != hotels.capacity() {
         panic!("number of hotels does not match expected amount. expected: {expected}");
@@ -349,46 +377,49 @@ fn main() {
 
     let calculated= calc_hotel_distances(&hotels, travel);
     let result = calculated.result;
-    let largest = if hotel_largest > calculated.largest {
-        hotel_largest
-    } else {
-        calculated.largest
-    };
-    let spacer = " ".repeat(largest);
 
-    print!("index:");
-
-    for index in 0..result.len() {
-        if index == 0 {
-            print!(" {spacer}");
+    if logging {
+        let largest = if hotel_largest > calculated.largest {
+            hotel_largest
         } else {
-            print!(" {:largest$}", index - 1);
+            calculated.largest
+        };
+        let spacer = " ".repeat(largest);
+
+        print!("index:");
+
+        for index in 0..result.len() {
+            if index == 0 {
+                print!(" {spacer}");
+            } else {
+                print!(" {:largest$}", index - 1);
+            }
         }
-    }
 
-    print!("\n dist:");
+        print!("\n dist:");
 
-    for index in 0..result.len() {
-        if index == 0 {
-            print!(" {spacer}");
-        } else {
-            print!(" {:largest$}", hotels[index - 1]);
+        for index in 0..result.len() {
+            if index == 0 {
+                print!(" {spacer}");
+            } else {
+                print!(" {:largest$}", hotels[index - 1]);
+            }
         }
+
+        print!("\n cost:");
+
+        for index in 0..result.len() {
+            print!(" {:largest$}", result[index].cost);
+        }
+
+        print!("\n prev:");
+
+        for index in 0..result.len() {
+            print!(" {:largest$}", result[index].hotel);
+        }
+
+        print!("\n");
     }
-
-    print!("\n cost:");
-
-    for index in 0..result.len() {
-        print!(" {:largest$}", result[index].cost);
-    }
-
-    print!("\n prev:");
-
-    for index in 0..result.len() {
-        print!(" {:largest$}", result[index].hotel);
-    }
-
-    print!("\n");
 
     let mut next_index = result.len() - 1;
     let mut visited = Vec::new();
@@ -411,5 +442,5 @@ fn main() {
         print!(" {hotel}");
     }
 
-    println!("\nTotal penalty: {}", result[result.len() - 1].cost);
+    println!(" \nTotal penalty: {}", result[result.len() - 1].cost);
 }

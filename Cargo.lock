@@ -28,3 +28,19 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
+
+[[package]]
+name = "floyd-warshall"
+version = "0.1.0"
+
+[[package]]
+name = "huffman_encoding"
+version = "0.1.0"
+
+[[package]]
+name = "leaf_partition"
+version = "0.1.0"
+
+[[package]]
+name = "tree_vc"
+version = "0.1.0"

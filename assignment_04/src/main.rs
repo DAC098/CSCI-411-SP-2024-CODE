@@ -502,15 +502,19 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
     }
 
     for from_index in 1..from_len {
-        println!("==============================");
+        //println!("==============================");
 
         for to_index in 1..to_len {
-            print!("{from_index}:{to_index}");
+            //print!("{from_index}:{to_index}");
 
             if from[from_index - 1] == to[to_index - 1] {
-                println!(" matches");
-
-                memory[to_index][from_index] = Edit::mat(memory[to_index - 1][from_index - 1].value);
+                memory[to_index][from_index] = if sub < 0 {
+                    //println!(" matches (sub)");
+                    Edit::sub(memory[to_index - 1][from_index - 1].value + sub)
+                } else {
+                    //println!(" matches");
+                    Edit::mat(memory[to_index - 1][from_index - 1].value)
+                };
             } else {
                 let mut min = Edit::sub(memory[to_index - 1][from_index - 1].value + sub);
 
@@ -546,14 +550,14 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
                     }
                 }
 
-                println!(" -> {min}");
+                //println!(" -> {min}");
 
                 memory[to_index][from_index] = min;
             }
         }
     }
 
-    println!("==============================");
+    //println!("==============================");
 
     EditResult {
         result: memory,
@@ -624,6 +628,7 @@ fn main() {
         let leading_dash_spacer = "-".repeat(leading_width);
         let leading_spacer = " ".repeat(leading_width);
 
+        /*
         print!(" {leading_spacer}    |");
 
         for col in 0..=from_bytes.len() {
@@ -663,6 +668,7 @@ fn main() {
 
             println!("");
         }
+        */
 
         let mut from_index = from_bytes.len();
         let mut to_index = to_bytes.len();
