@@ -298,7 +298,7 @@ fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
 }
 
 fn main() {
-    let mut logging = false;
+    let mut verbose = false;
     let mut args = std::env::args();
     args.next();
 
@@ -307,8 +307,8 @@ fn main() {
             break;
         };
 
-        if arg == "--log" {
-            logging = true;
+        if arg == "--verbose" {
+            verbose = true;
         }
     }
 
@@ -367,7 +367,7 @@ fn main() {
         hotels.push(dist);
     }
 
-    if logging {
+    if verbose {
         println!("travel: {travel}");
     }
 
@@ -378,7 +378,7 @@ fn main() {
     let calculated= calc_hotel_distances(&hotels, travel);
     let result = calculated.result;
 
-    if logging {
+    if verbose {
         let largest = if hotel_largest > calculated.largest {
             hotel_largest
         } else {

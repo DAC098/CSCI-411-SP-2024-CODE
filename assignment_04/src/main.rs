@@ -486,7 +486,7 @@ struct EditResult {
 ///   +---+---+---+---+---+
 /// o |   |   |   |   |   |
 ///   +---+---+---+---+---+
-fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> EditResult {
+fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost, verbose: bool) -> EditResult {
     let mut longest = 0;
     let from_len = from.len() + 1;
     let to_len = to.len() + 1;
@@ -502,17 +502,27 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
     }
 
     for from_index in 1..from_len {
-        //println!("==============================");
+        if verbose {
+            println!("==============================");
+        }
 
         for to_index in 1..to_len {
-            //print!("{from_index}:{to_index}");
+            if verbose {
+                print!("{from_index}:{to_index}");
+            }
 
             if from[from_index - 1] == to[to_index - 1] {
                 memory[to_index][from_index] = if sub < 0 {
-                    //println!(" matches (sub)");
+                    if verbose {
+                        println!(" matches (sub)");
+                    }
+
                     Edit::sub(memory[to_index - 1][from_index - 1].value + sub)
                 } else {
-                    //println!(" matches");
+                    if verbose {
+                        println!(" matches");
+                    }
+
                     Edit::mat(memory[to_index - 1][from_index - 1].value)
                 };
             } else {
@@ -530,7 +540,7 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
                 }
 
                 // for printing
-                {
+                if verbose {
                     if min.value == 0 {
                         if 1 > longest {
                             longest = 1;
@@ -548,16 +558,18 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
                             longest = check;
                         }
                     }
-                }
 
-                //println!(" -> {min}");
+                    println!(" -> {min}");
+                }
 
                 memory[to_index][from_index] = min;
             }
         }
     }
 
-    //println!("==============================");
+    if verbose {
+        println!("==============================");
+    }
 
     EditResult {
         result: memory,
@@ -566,6 +578,20 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost) -> Edi
 }
 
 fn main() {
+    let mut verbose = false;
+    let mut args = std::env::args();
+    args.next();
+
+    loop {
+        let Some(arg) = args.next() else {
+            break;
+        };
+
+        if arg == "--verbose" {
+            verbose = true;
+        }
+    }
+
     let mut lines = std::io::stdin().lines();
     let ins: Cost;
     let del: Cost;
@@ -620,55 +646,56 @@ fn main() {
 
         let rtn = edit_distance(from_bytes, to_bytes, ins, del, sub);
         let result = rtn.result;
-        let longest = rtn.longest;
-        let leading_width = (to_bytes.len().ilog10() + 1) as usize;
 
-        let dash_spacer = "-".repeat(longest);
-        let spacer = " ".repeat(longest);
-        let leading_dash_spacer = "-".repeat(leading_width);
-        let leading_spacer = " ".repeat(leading_width);
+        if verbose {
+            let longest = rtn.longest;
+            let leading_width = (to_bytes.len().ilog10() + 1) as usize;
 
-        /*
-        print!(" {leading_spacer}    |");
+            let dash_spacer = "-".repeat(longest);
+            let spacer = " ".repeat(longest);
+            let leading_dash_spacer = "-".repeat(leading_width);
+            let leading_spacer = " ".repeat(leading_width);
 
-        for col in 0..=from_bytes.len() {
-            print!(" {col:longest$} ");
-        }
+            print!(" {leading_spacer}    |");
 
-        println!("");
-        print!(" {leading_spacer}    |");
-
-        for index in 0..=from_bytes.len() {
-            if index == 0 {
-                print!(" {spacer} ");
-            } else {
-                print!(" {:>longest$} ", char::from(from_bytes[index - 1]));
-            }
-        }
-
-        println!("");
-        print!("-{leading_dash_spacer}----+");
-
-        for _ in 0..=from_bytes.len() {
-            print!("-{dash_spacer}-");
-        }
-
-        println!("");
-
-        for (index, row) in result.iter().enumerate() {
-            if index == 0 {
-                print!(" {index:leading_width$}    |");
-            } else {
-                print!(" {index:leading_width$}  {} |", char::from(to_bytes[index - 1]));
-            }
-
-            for pair in row {
-                print!(" {:longest$}{}", pair.value, pair.kind);
+            for col in 0..=from_bytes.len() {
+                print!(" {col:longest$} ");
             }
 
             println!("");
+            print!(" {leading_spacer}    |");
+
+            for index in 0..=from_bytes.len() {
+                if index == 0 {
+                    print!(" {spacer} ");
+                } else {
+                    print!(" {:>longest$} ", char::from(from_bytes[index - 1]));
+                }
+            }
+
+            println!("");
+            print!("-{leading_dash_spacer}----+");
+
+            for _ in 0..=from_bytes.len() {
+                print!("-{dash_spacer}-");
+            }
+
+            println!("");
+
+            for (index, row) in result.iter().enumerate() {
+                if index == 0 {
+                    print!(" {index:leading_width$}    |");
+                } else {
+                    print!(" {index:leading_width$}  {} |", char::from(to_bytes[index - 1]));
+                }
+
+                for pair in row {
+                    print!(" {:longest$}{}", pair.value, pair.kind);
+                }
+
+                println!("");
+            }
         }
-        */
 
         let mut from_index = from_bytes.len();
         let mut to_index = to_bytes.len();
@@ -678,38 +705,54 @@ fn main() {
         let mut to_output = Vec::new();
 
         while from_index != 0 && to_index != 0 {
-            //print!("indexs: {from_index}:{to_index}");
+            if verbose {
+                print!("indexs: {from_index}:{to_index}");
+            }
 
             match result[to_index][from_index].kind {
                 EditKind::Mat => {
-                    //print!(" mat");
+                    if verbose {
+                        print!(" mat");
+                    }
+
                     from_output.push(from_bytes[from_index - 1]);
                     to_output.push(to_bytes[to_index - 1]);
                     from_index -= 1;
                     to_index -= 1;
                 }
                 EditKind::Sub => {
-                    //print!(" sub");
+                    if verbose {
+                        print!(" sub");
+                    }
+
                     from_output.push(from_bytes[from_index - 1]);
                     to_output.push(to_bytes[to_index - 1]);
                     from_index -= 1;
                     to_index -= 1;
                 }
                 EditKind::Ins => {
-                    //print!(" ins");
+                    if verbose {
+                        print!(" ins");
+                    }
+
                     from_output.push(b'_');
                     to_output.push(to_bytes[to_index - 1]);
                     to_index -= 1;
                 }
                 EditKind::Del => {
-                    //print!(" del");
+                    if verbose {
+                        print!(" del");
+                    }
+
                     from_output.push(from_bytes[from_index - 1]);
                     to_output.push(b'_');
                     from_index -= 1;
                 },
             }
 
-            //println!(" -> {from_index}:{to_index}");
+            if verbose {
+                println!(" -> {from_index}:{to_index}");
+            }
         }
 
         while from_index != 0 {
