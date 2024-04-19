@@ -266,21 +266,35 @@ struct CostResult {
     largest: usize,
 }
 
-fn calc_hotel_distances(hotels: &[Distance], travel: Distance) -> CostResult {
-    let mut memory: Vec<HotelCost> = vec![HotelCost::default(); hotels.len() + 1];
+fn calc_hotel_distances(hotels: &[Distance], travel: Distance, verbose: bool) -> CostResult {
+    let mut memory: Vec<HotelCost> = vec![HotelCost::default(); hotels.len()];
     let mut largest = 0;
 
     for memory_index in 1..memory.len() {
-        memory[memory_index].cost = (travel - hotels[memory_index - 1]).pow(2);
+        if verbose {
+            println!("setting initial index: {memory_index}");
+        }
+
+        memory[memory_index].cost = (travel - hotels[memory_index]).pow(2);
         memory[memory_index].hotel = memory_index;
 
         for hotel_index in 0..memory_index {
-            let penalty = (travel - (hotels[memory_index - 1] - hotels[hotel_index])).pow(2);
+            if verbose {
+                print!("    checking hotel: {hotel_index}[{}]", hotels[hotel_index]);
+            }
+
+            let penalty = (travel - (hotels[memory_index] - hotels[hotel_index])).pow(2);
             let prev = memory[hotel_index].cost + penalty;
 
             if prev < memory[memory_index].cost {
+                if verbose {
+                    println!(" -> updating to {prev} {hotel_index}");
+                }
+
                 memory[memory_index].cost = prev;
-                memory[memory_index].hotel = hotel_index + 1;
+                memory[memory_index].hotel = hotel_index;
+            } else if verbose {
+                println!(" -> no change {prev}");
             }
         }
 
@@ -341,7 +355,8 @@ fn main() {
         expected = values[0] as usize;
         travel = values[1];
 
-        hotels.reserve(expected);
+        hotels.reserve(expected + 1);
+        hotels.push(0);
     }
 
     let mut hotel_largest: usize = 0;
@@ -375,7 +390,7 @@ fn main() {
         panic!("number of hotels does not match expected amount. expected: {expected}");
     }
 
-    let calculated= calc_hotel_distances(&hotels, travel);
+    let calculated= calc_hotel_distances(&hotels, travel, verbose);
     let result = calculated.result;
 
     if verbose {
@@ -389,21 +404,13 @@ fn main() {
         print!("index:");
 
         for index in 0..result.len() {
-            if index == 0 {
-                print!(" {spacer}");
-            } else {
-                print!(" {:largest$}", index - 1);
-            }
+            print!(" {:largest$}", index);
         }
 
         print!("\n dist:");
 
         for index in 0..result.len() {
-            if index == 0 {
-                print!(" {spacer}");
-            } else {
-                print!(" {:largest$}", hotels[index - 1]);
-            }
+            print!(" {:largest$}", hotels[index]);
         }
 
         print!("\n cost:");

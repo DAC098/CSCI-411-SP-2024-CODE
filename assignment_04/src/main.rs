@@ -511,25 +511,16 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost, verbos
                 print!("{from_index}:{to_index}");
             }
 
-            if from[from_index - 1] == to[to_index - 1] {
-                memory[to_index][from_index] = if sub < 0 {
-                    if verbose {
-                        println!(" matches (sub)");
-                    }
+            let curr_sub = memory[to_index - 1][from_index - 1].value + sub;
+            let curr_del = memory[to_index][from_index - 1].value + del;
+            let curr_ins = memory[to_index - 1][from_index].value + ins;
 
-                    Edit::sub(memory[to_index - 1][from_index - 1].value + sub)
-                } else {
-                    if verbose {
-                        println!(" matches");
-                    }
+            memory[to_index][from_index] = if from[from_index - 1] == to[to_index - 1] {
+                let mut min = Edit::mat(memory[to_index - 1][from_index - 1].value);
 
-                    Edit::mat(memory[to_index - 1][from_index - 1].value)
-                };
-            } else {
-                let mut min = Edit::sub(memory[to_index - 1][from_index - 1].value + sub);
-
-                let curr_del = memory[to_index][from_index - 1].value + del;
-                let curr_ins = memory[to_index - 1][from_index].value + ins;
+                if curr_sub < min.value {
+                    min = Edit::sub(memory[to_index - 1][from_index - 1].value + sub)
+                }
 
                 if curr_del < min.value {
                     min = Edit::del(curr_del);
@@ -562,8 +553,43 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost, verbos
                     println!(" -> {min}");
                 }
 
-                memory[to_index][from_index] = min;
-            }
+                min
+            } else {
+                let mut min = Edit::sub(curr_sub);
+
+                if curr_del < min.value {
+                    min = Edit::del(curr_del);
+                }
+
+                if curr_ins < min.value {
+                    min = Edit::ins(curr_ins);
+                }
+
+                // for printing
+                if verbose {
+                    if min.value == 0 {
+                        if 1 > longest {
+                            longest = 1;
+                        }
+                    } else if min.value < 0 {
+                        let check = min.value.abs().ilog10() + 2;
+
+                        if check > longest {
+                            longest = check;
+                        }
+                    } else {
+                        let check = min.value.ilog10() + 1;
+
+                        if check > longest {
+                            longest = check;
+                        }
+                    }
+
+                    println!(" -> {min}");
+                }
+
+                min
+            };
         }
     }
 
@@ -644,7 +670,7 @@ fn main() {
         let from_bytes = from.as_bytes();
         let to_bytes = to.as_bytes();
 
-        let rtn = edit_distance(from_bytes, to_bytes, ins, del, sub);
+        let rtn = edit_distance(from_bytes, to_bytes, ins, del, sub, verbose);
         let result = rtn.result;
 
         if verbose {
