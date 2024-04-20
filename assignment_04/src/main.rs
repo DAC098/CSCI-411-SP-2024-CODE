@@ -519,7 +519,7 @@ fn edit_distance(from: &[u8], to: &[u8], ins: Cost, del: Cost, sub: Cost, verbos
                 let mut min = Edit::mat(memory[to_index - 1][from_index - 1].value);
 
                 if curr_sub < min.value {
-                    min = Edit::sub(memory[to_index - 1][from_index - 1].value + sub)
+                    min = Edit::sub(curr_sub);
                 }
 
                 if curr_del < min.value {
