@@ -36,6 +36,8 @@ run_cpp() {
     elif [[ $3 == "rust-debug" ]]; then
         main="./target/debug/${1}"
         no_diff=true
+    elif [[ $3 == "debug" ]]; then
+        no_diff=true
     fi
 
     if [[ ! -f $in_file ]]; then
