@@ -44,3 +44,6 @@ version = "0.1.0"
 [[package]]
 name = "tree_vc"
 version = "0.1.0"
+dependencies = [
+ "common",
+]
