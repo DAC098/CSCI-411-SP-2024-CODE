@@ -1,0 +1,31 @@
+Enter a string for the Turing machine to use as input: Enter space separated state names: Enter the start state: Enter a blank symbol for the tape: Enter space separated accepting states: Enter symbols of the input alphabet separated by spaces: Enter symbols of the tape alphabet separated by spaces: Enter the number of transitions in the Turing machine: Enter one transition per line with the initial state, symbol being read on the tape, destination state, symbol written to the tape, and tape head direction (L or R) separated by spaces: 
+Config: Abbbbbb
+Config: XFbbbbb
+Config: XbGbbbb
+Config: XbbGbbb
+Config: XbbbGbb
+Config: XbbbbGb
+Config: XbbbbbGO
+Config: XbbbbHb
+Config: XbbbEbX
+Config: XbbEbbX
+Config: XbEbbbX
+Config: XEbbbbX
+Config: EXbbbbX
+Config: XAbbbbX
+Config: XXFbbbX
+Config: XXbGbbX
+Config: XXbbGbX
+Config: XXbbbGX
+Config: XXbbHbX
+Config: XXbEbXX
+Config: XXEbbXX
+Config: XEXbbXX
+Config: XXAbbXX
+Config: XXXFbXX
+Config: XXXbGXX
+Config: XXXHbXX
+Config: XXEXXXX
+Config: XXXAXXX
+Config: XXXXIXX
+bbbbbb is in the language recognized by the Turing machine

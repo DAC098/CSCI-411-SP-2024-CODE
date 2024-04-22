@@ -1,0 +1,25 @@
+1010110+111011
+A B C D E F G
+A
+b
+G
+0 1 +
+X Y
+17
+A 0 A 0 R
+A 1 A 1 R
+A + B + R
+B 0 B 0 R
+B 1 B 1 R
+B b C b L
+C 0 C 1 L
+C 1 D 0 L
+C + F + R
+D 0 D 0 L
+D 1 D 1 L
+D + E + L
+E 0 A 1 R
+E 1 E 0 L
+E b A 1 R
+F 1 F b R
+F b G b R

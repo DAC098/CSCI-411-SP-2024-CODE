@@ -1,0 +1,19 @@
+000000000000000111111111111111
+A B C D E
+A
+b
+E
+0 1
+X Y
+11
+A 0 B X R
+A Y D Y R
+A b D b R
+B 0 B 0 R
+B Y B Y R
+B 1 C Y L
+C Y C Y L
+C 0 C 0 L
+C X A X R
+D Y D Y R
+D b E b R

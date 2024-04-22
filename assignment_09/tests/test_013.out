@@ -1,0 +1,18 @@
+Enter a string for the Turing machine to use as input: Enter space separated state names: Enter the start state: Enter a blank symbol for the tape: Enter space separated accepting states: Enter symbols of the input alphabet separated by spaces: Enter symbols of the tape alphabet separated by spaces: Enter the number of transitions in the Turing machine: Enter one transition per line with the initial state, symbol being read on the tape, destination state, symbol written to the tape, and tape head direction (L or R) separated by spaces: 
+Config: A0010010
+Config: XB010010
+Config: X0B10010
+Config: XC0Y0010
+Config: CX0Y0010
+Config: XA0Y0010
+Config: XXBY0010
+Config: XXYB0010
+Config: XXY0B010
+Config: XXY00B10
+Config: XXY0C0Y0
+Config: XXYC00Y0
+Config: XXCY00Y0
+Config: XCXY00Y0
+Config: XXAY00Y0
+Config: XXYD00Y0
+0010010 is not in the language recognized by the Turing machine
