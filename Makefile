@@ -1,4 +1,4 @@
-all: assignment_01 assignment_02 assignment_03 assignment_04 assignment_05 tree_vc floyd-warshall
+all: assignment_01 assignment_02 assignment_03 assignment_04 assignment_05 tree_vc floyd-warshall leaf_partition
 
 assignment_01:
 	$(MAKE) -C ./assignment_01
@@ -21,6 +21,9 @@ tree_vc:
 floyd-warshall:
 	$(MAKE) -C ./floyd-warshall
 
+leaf_partition:
+	$(MAKE) -C ./leaf_partition
+
 clean:
 	$(MAKE) -C ./assignment_01 clean
 	$(MAKE) -C ./assignment_02 clean
@@ -29,5 +32,6 @@ clean:
 	$(MAKE) -C ./assignment_05 clean
 	$(MAKE) -C ./tree_vc clean
 	$(MAKE) -C ./floyd-warshall clean
+	$(MAKE) -C ./leaf_partition clean
 
-.PHONY: all assignment_01 assignment_02 assignment_03 assignment_04 assignment_05 tree_vc floyd-warshall clean
+.PHONY: all assignment_01 assignment_02 assignment_03 assignment_04 assignment_05 tree_vc floyd-warshall leaf_partition clean
