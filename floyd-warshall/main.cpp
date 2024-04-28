@@ -56,11 +56,11 @@ int main() {
         std::size_t i = 0, j = 0;
         int w = -1;
 
-        std::cout << count;
+        //std::cout << count;
 
         std::cin >> i >> j >> w;
 
-        std::cout << "\n";
+        //std::cout << "\n";
 
         matrix[i - 1][j - 1].value = w;
         matrix[i - 1][j - 1].inf = false;
