@@ -98,7 +98,7 @@ std::uint64_t huffman_encoding(std::string& encode){
 
         if (curr.node == nullptr) {
             bfs_queue.pop();
-            continue
+            continue;
         }
 
         if (curr.node->is_leaf) {
