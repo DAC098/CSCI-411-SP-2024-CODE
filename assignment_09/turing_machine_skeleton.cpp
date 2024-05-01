@@ -35,92 +35,72 @@ struct Action{
  * delta - map<string, map <char, Action>>&              *
 **********************************************************/
 void getInput(string &w, set<string> &Q, string &q0, char &B, set<string> &A, set<char> &sigma, set<char> &gamma, map<string, map <char, Action>> &delta){
-    cout << "Enter a string for the Turing machine to use as input: ";
-    getline(cin, w);
-    istringstream iss(w);
-    iss >> w;
+  cout << "Enter a string for the Turing machine to use as input: ";
+  getline(cin, w);
+  istringstream iss(w);
+  iss >> w;
 
-    string states = "";
-    cout << "Enter space separated state names: ";
-    getline(cin, states);
+  string states = "";
+  cout << "Enter space separated state names: ";
+  getline(cin, states);
+  iss.clear();
+  iss.str(states);
+  string add;
+  while(iss >> add){ Q.insert(add); }
+
+  cout << "Enter the start state: ";
+  getline(cin, q0);
+  iss.clear();
+  iss.str(q0);
+  iss >> q0;
+
+  string line = "";
+  cout << "Enter a blank symbol for the tape: ";
+  getline(cin, line);
+  B = line[0];
+
+  string accepting = "";
+  cout << "Enter space separated accepting states: ";
+  getline(cin, accepting);
+  iss.clear();
+  iss.str(accepting);
+  while(iss >> add){ A.insert(add); }
+
+  string alphabet = "";
+  cout << "Enter symbols of the input alphabet separated by spaces: ";
+  getline(cin, alphabet);
+  iss.clear();
+  iss.str(alphabet);
+  while(iss >> add){ sigma.insert(add[0]); }
+
+  string tape = "";
+  cout << "Enter symbols of the tape alphabet separated by spaces: ";
+  getline(cin, tape);
+  iss.clear();
+  iss.str(tape);
+  while(iss >> add){ gamma.insert(add[0]); }
+
+  string m = "";
+  cout << "Enter the number of transitions in the Turing machine: ";
+  getline(cin, m);
+
+  string transition = "";
+  cout << "Enter one transition per line with the initial state, symbol being read on the tape, destination state, symbol written to the tape, and tape head direction (L or R) separated by spaces: ";
+  for (int i = 0; i < stoi(m); i++){
+    getline(cin, transition);
     iss.clear();
-    iss.str(states);
-    string add;
-
-    while (iss >> add) {
-        Q.insert(add);
-    }
-
-    cout << "Enter the start state: ";
-    getline(cin, q0);
-    iss.clear();
-    iss.str(q0);
-    iss >> q0;
-
-    string line = "";
-    cout << "Enter a blank symbol for the tape: ";
-    getline(cin, line);
-    B = line[0];
-
-    string accepting = "";
-    cout << "Enter space separated accepting states: ";
-    getline(cin, accepting);
-    iss.clear();
-    iss.str(accepting);
-
-    while (iss >> add) {
-        A.insert(add); 
-    }
-
-    string alphabet = "";
-    cout << "Enter symbols of the input alphabet separated by spaces: ";
-    getline(cin, alphabet);
-
-    iss.clear();
-    iss.str(alphabet);
-
-    while (iss >> add) {
-        sigma.insert(add[0]);
-    }
-
-    string tape = "";
-    cout << "Enter symbols of the tape alphabet separated by spaces: ";
-
-    getline(cin, tape);
-
-    iss.clear();
-    iss.str(tape);
-
-    while (iss >> add) {
-        gamma.insert(add[0]);
-    }
-
-    string m = "";
-    cout << "Enter the number of transitions in the Turing machine: ";
-    getline(cin, m);
-
-    string transition = "";
-    cout << "Enter one transition per line with the initial state, symbol being read on the tape, destination state, symbol written to the tape, and tape head direction (L or R) separated by spaces: ";
-
-    for (int i = 0; i < stoi(m); i++){
-        getline(cin, transition);
-
-        iss.clear();
-        iss.str(transition);
-
-        string init;
-        char read;
-        Action act;
-
-        iss >> init;
-        iss >> read;
-        iss >> act.dest;
-        iss >> act.write;
-        iss >> act.dir;
-
-        delta[init][read] = act;
-    }
-    cout << endl;
+    iss.str(transition);
+    string init;
+    char read;
+    Action act;
+    iss >> init;
+    iss >> read;
+    iss >> act.dest;
+    iss >> act.write;
+    iss >> act.dir;
+    delta[init][read] = act;
+  }
+  cout << endl;
 }
 
 /***************************************************************
@@ -147,16 +127,8 @@ string printConfiguration(string curState, string tape, int loc){
  * gamma - set<char>& - the set of tape symbols                *
  * delta - map<string, map <char, Action>>&                    *
 ****************************************************************/
-bool simulateTM(
-    const string &w,
-    set<string> &Q,
-    string &q0,
-    char &B,
-    set<string> &A,
-    set<char> &sigma,
-    set<char> &gamma,
-    map<string, map<char, Action>> &delta
-) {
+// states are names
+bool simulateTM(const string &w, set<string> &Q, string &q0, char &B, set<string> &A, set<char> &sigma, set<char> &gamma, map<string, map <char, Action>> &delta){
   // YOUR CODE HERE
 }
 
