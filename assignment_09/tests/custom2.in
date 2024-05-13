@@ -1,0 +1,18 @@
+010
+A B C D E
+A
+b
+E
+0 1
+X Y 0 1
+10
+A 0 B X R
+A Y D Y R
+B 0 B 0 R
+B Y B Y R
+B 1 C Y L
+C Y C Y L
+C 0 C 0 L
+C X A X R
+D Y D Y R
+D B E B R
